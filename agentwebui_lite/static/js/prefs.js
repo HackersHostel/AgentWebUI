@@ -108,3 +108,32 @@ export function setPrefs(patch) {
 }
 
 darkQuery.addEventListener?.('change', () => { const p = store.get().prefs; if (p && p.theme === 'system') applyPrefs(p); });
+
+// Settings › Chat, Voice and Notifications: kept on this browser like the appearance.
+export const CHAT_DEFAULTS = {
+  enterToSend: true, instructions: '', startPage: 'new', temperature: null, maxTokens: null,
+  voiceLang: '', voiceName: '', autoRead: false, rate: 1,
+  notifyFinish: true, notifyFail: true, notifyWaiting: true, inApp: true,
+  hiddenModels: {},
+};
+
+export function loadChatPrefs() {
+  return { ...CHAT_DEFAULTS, ...local.get('chat', {}) };
+}
+
+export function setChatPrefs(patch) {
+  const next = { ...store.get().chatPrefs, ...patch };
+  local.set('chat', next);
+  store.set({ chatPrefs: next });
+}
+
+// Back to a plain start: every preference on this browser, each agent's remembered model, the default model,
+// favorites and the sidebar. Chats and projects on the server are kept.
+export function resetEverything() {
+  try {
+    for (const key of Object.keys(localStorage)) if (key.startsWith('awl.')) localStorage.removeItem(key);
+  } catch { /* nothing stored */ }
+  const prefs = loadPrefs();
+  store.set({ prefs, chatPrefs: loadChatPrefs(), sidebar: 'open', draftTarget: null, draftText: '' });
+  applyPrefs(prefs);
+}

@@ -157,14 +157,16 @@ class Store:
             out.append({**chat, "snippet": snippet, "in_title": needle.lower() in chat["title"].lower()})
         return out
 
-    def clone_chat(self, chat_id: str, title: str) -> dict[str, Any] | None:
-        """A copy of the thread on screen, as a new chat with no agent session."""
+    def clone_chat(self, chat_id: str, title: str, upto: int | None = None) -> dict[str, Any] | None:
+        """A copy of the thread on screen (up to and including `upto`), as a new chat with no agent session."""
         chat = self.get_chat(chat_id)
         if chat is None:
             return None
         copy = self.create_chat(chat["kind"], chat["target"], chat["cwd"], title, chat["config"], chat["project_id"])
         for message in self.messages(chat_id):
             self.add_message(copy["id"], message["role"], message["content"], message["parts"], message["meta"])
+            if message["id"] == upto:
+                break
         return self.get_chat(copy["id"])
 
     # --- messages ---

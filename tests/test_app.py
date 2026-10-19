@@ -522,13 +522,22 @@ async def test_uploaded_html_never_runs_as_a_page(settings_for, client_for):
     assert (await client.post("/api/files", json={"name": "x", "data": "not base64!"})).status == 422
 
 
+async def test_a_file_in_a_shared_folder_can_be_attached(settings_for, client_for, tmp_path):
+    client = await client_for(settings_for())
+    (tmp_path / "notes.md").write_text("# Plan\n")
+    attached = await (await client.post("/api/files", json={"path": str(tmp_path / "notes.md")})).json()
+    assert attached["name"] == "notes.md" and attached["mime"] == "text/markdown" and attached["size"] == 7
+    assert (await client.post("/api/files", json={"path": "/etc/hostname"})).status == 403
+
+
 # --- versions, organizing, temporary chats, projects ---
 async def test_editing_a_message_adds_a_version_and_both_stay(settings_for, client_for, fake_openai):
     client = await client_for(settings_for(fake_openai=fake_openai))
     chat = await (await client.post("/api/chats", json={"target": "model:local/small"})).json()
     await events(await client.post(f"/api/chats/{chat['id']}/messages", json={"text": "Hi"}))
     first = (await (await client.get(f"/api/chats/{chat['id']}")).json())["messages"]
-    await events(await client.post(f"/api/chats/{chat['id']}/messages", json={"text": "Hello", "edit": first[0]["id"]}))
+    got = await events(await client.post(f"/api/chats/{chat['id']}/messages", json={"text": "Hello", "edit": first[0]["id"]}))
+    assert len(next(e for e in got if e["type"] == "user")["message"]["siblings"]) == 2
     assert [m["content"] for m in fake_openai.seen[-1]["messages"]] == ["Hello"]
     thread = (await (await client.get(f"/api/chats/{chat['id']}")).json())["messages"]
     assert [m["content"] for m in thread] == ["Hello", "Hello there"]
@@ -573,6 +582,11 @@ async def test_chats_can_be_pinned_archived_cloned_and_tuned(settings_for, clien
     copy = await (await client.post(f"/api/chats/{one['id']}/clone")).json()
     copied = await (await client.get(f"/api/chats/{copy['id']}")).json()
     assert copy["title"] == "Hi (copy)" and [m["content"] for m in copied["messages"]] == ["Hi", "Hello there"]
+    await events(await client.post(f"/api/chats/{one['id']}/messages", json={"text": "More"}))
+    thread = (await (await client.get(f"/api/chats/{one['id']}")).json())["messages"]
+    branch = await (await client.post(f"/api/chats/{one['id']}/clone", json={"upto": thread[1]["id"]})).json()
+    branched = await (await client.get(f"/api/chats/{branch['id']}")).json()
+    assert branch["title"] == "Hi (branch)" and len(branched["messages"]) == 2
 
 
 async def test_a_temporary_chat_is_never_saved(settings_for, client_for, fake_openai, tmp_path):

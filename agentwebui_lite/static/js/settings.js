@@ -1,32 +1,36 @@
-// Settings (Settings · appearance and Settings · providers boards). Lite is configured in .env, so the provider and
-// agent forms write the lines to paste there instead of saving anything.
-import { html, useState, store, useStore, cx, navigate, notInLite, copyText, api, providerGradient, AGENT_GRADIENT, mod, toast } from './lib.js';
+// Settings (Settings · appearance, Settings · providers and Settings more boards). Lite is configured in .env, so
+// the provider and agent forms write the lines to paste there; what is yours (chat, voice, notifications) is kept
+// in this browser.
+import { html, useState, useEffect, store, useStore, cx, navigate, copyText, api, providerGradient, AGENT_GRADIENT, mod, toast, local } from './lib.js';
 import { Icon } from './icons.js';
-import { THEMES, SWATCHES, FONTS, CODES, SIZES, ACCENTS, setPrefs, customVars } from './prefs.js';
-import { loadConfig } from './actions.js';
+import { THEMES, SWATCHES, FONTS, CODES, SIZES, ACCENTS, setPrefs, customVars, setChatPrefs, resetEverything } from './prefs.js';
+import { loadConfig, targets, defaultTarget } from './actions.js';
+import { canDictate, canSpeak, voices, speak } from './voice.js';
+import { confirm } from './ui.js';
 
 const NAV = [
-  ['You', [['account', 'person', 'Account & security'], ['appearance', 'palette', 'Appearance'], ['chat', 'chat', 'Chat'],
-    ['notifications', 'notification', 'Notifications'], ['keyboard', 'key', 'Keyboard'], ['voice', 'mic', 'Voice']]],
-  ['Connections', [['providers', 'plug', 'Providers'], ['integrations', 'plugin', 'Integrations'], ['workspaces', 'workspace', 'Workspaces & Git']]],
-  ['Administration', [['people', 'users', 'People'], ['roles', 'shield', 'Roles & access'], ['defaults', 'settings', 'Defaults']]],
+  ['You', [['chat', 'chat', 'Chat'], ['appearance', 'palette', 'Appearance'], ['voice', 'mic', 'Voice'],
+    ['notifications', 'notification', 'Notifications'], ['keyboard', 'key', 'Keyboard']]],
+  ['Connections', [['providers', 'plug', 'Providers'], ['workspaces', 'workspace', 'Workspaces & Git']]],
 ];
-const BUILT = new Set(['appearance', 'providers', 'notifications', 'keyboard']);
+const BUILT = new Set(NAV.flatMap(([, items]) => items.map(([id]) => id)));
 
 export function Settings() {
   const route = useStore((s) => s.route);
-  const section = BUILT.has(route.section) ? route.section : 'appearance';
+  const section = BUILT.has(route.section) ? route.section : 'chat';
   return html`<div class="settings">
     <aside class="snav" aria-label="Settings">
       <a href="#/" class="sn back" onClick=${(e) => { e.preventDefault(); navigate('#/'); }}><${Icon} name="chevron-left" />Back to chats</a>
       <nav>${NAV.map(([group, items]) => html`<div key=${group}><div class="sg">${group}</div>
-        ${items.map(([id, icon, label]) => html`<a key=${id} href=${`#/settings/${id}`} class=${cx('sn', id === section && 'on')} aria-current=${id === section ? 'page' : undefined}
-          onClick=${(e) => { if (!BUILT.has(id)) { e.preventDefault(); notInLite(label)(); } }}><${Icon} name=${icon} />${label}</a>`)}</div>`)}</nav>
+        ${items.map(([id, icon, label]) => html`<a key=${id} href=${`#/settings/${id}`} class=${cx('sn', id === section && 'on')} aria-current=${id === section ? 'page' : undefined}><${Icon} name=${icon} />${label}</a>`)}</div>`)}</nav>
     </aside>
     <main class="settings-main">
       <div class="settings-phone-head phone-only"><button class="ib" aria-label="Back to chats" onClick=${() => navigate('#/')}><${Icon} name="chevron-left" /></button>
         <select class="sel" value=${section} onChange=${(e) => navigate(`#/settings/${e.target.value}`)} aria-label="Settings section">
           ${[...BUILT].map((id) => html`<option value=${id}>${NAV.flatMap(([, i]) => i).find((x) => x[0] === id)[2]}</option>`)}</select></div>
+      ${section === 'chat' && html`<${ChatSettings} />`}
+      ${section === 'voice' && html`<${Voice} />`}
+      ${section === 'workspaces' && html`<${Workspaces} />`}
       ${section === 'appearance' && html`<${Appearance} />`}
       ${section === 'providers' && html`<${Providers} />`}
       ${section === 'notifications' && html`<${Notifications} />`}
@@ -129,11 +133,6 @@ function Appearance() {
         <div class="lab"><div class="t">Density</div><div class="sub">Compact fits more chats on screen.</div></div>
         <${Seg} label="Density" items=${[['comfortable', 'Comfortable'], ['compact', 'Compact']]} value=${p.density} onPick=${(v) => setPrefs({ density: v })} />
       </div>
-      <div class="srow">
-        <div class="lab"><div class="t">Start page</div><div class="sub">What opens when you launch the app.</div></div>
-        <button class="btn" style="min-width: 240px; justify-content: space-between; height: 36px; background: var(--bg-input)" onClick=${notInLite('Choosing a start page')}>
-          <span>A new chat</span><${Icon} name="chevron-down" /></button>
-      </div>
     </section>
     <section aria-label="Preview" class="preview-box">
       <div class="pv-head">Preview</div>
@@ -164,6 +163,7 @@ const AGENT_TYPES = [
 
 function Providers() {
   const config = useStore((s) => s.config);
+  const hiddenModels = useStore((s) => s.chatPrefs?.hiddenModels || {});
   const [testing, setTesting] = useState(false);
   const [showModels, setShowModels] = useState(null);
   const test = async () => {
@@ -194,10 +194,22 @@ function Providers() {
             <button class="btn btn-g" onClick=${() => setShowModels(showModels === p.id ? null : p.id)} aria-expanded=${showModels === p.id}>Models</button>
           </div>
           ${p.error && html`<div class="prov-note">${p.error}. Its models are hidden from the picker until it answers.${p.local ? html` If it runs on this machine, start it (for Ollama: <code class="mono">ollama serve</code>) and test again.` : ''}</div>`}
-          ${showModels === p.id && html`<div class="prov-models">${(config.models.filter((m) => m.provider === p.id)).map((m) => html`<span class="tn" key=${m.id}>${m.model}</span>`)}
+          ${showModels === p.id && html`<div class="prov-models" role="group" aria-label=${`Models from ${p.name}`}>
+            <span class="meta" style="width: 100%">Shown in the model picker. Tap one to hide it on this browser.</span>
+            ${(config.models.filter((m) => m.provider === p.id)).map((m) => {
+              const hidden = !!hiddenModels[`model:${m.id}`];
+              return html`<button key=${m.id} class=${cx('chip', !hidden && 'on')} aria-pressed=${!hidden}
+                onClick=${() => setChatPrefs({ hiddenModels: { ...hiddenModels, [`model:${m.id}`]: !hidden } })}>${!hidden && html`<${Icon} name="check" size=${13} />`}${m.model}</button>`;
+            })}
             ${p.models === 0 && html`<span style="color: var(--tx-3)">No models.</span>`}</div>`}
         </div>`)}
       </div>`}
+    </section>
+    <section aria-labelledby="h-default" class="ssec" style="gap: 0">
+      <div class="srow" style="border-top: 0; padding-top: 0">
+        <div class="lab"><div class="t" id="h-default">Default for new chats</div><div class="sub">Pick any model or agent from .env. ${mod}↵ in the model picker does the same.</div></div>
+        <${DefaultTarget} />
+      </div>
     </section>
     <section aria-labelledby="h-agents" class="ssec" style="gap: 10px">
       <h2 id="h-agents" class="h3">Agents</h2>
@@ -209,7 +221,8 @@ function Providers() {
             <div style="flex: 1; min-width: 0">
               <div class="prov-name"><span>${a.name}</span>
                 <span class=${cx('pill', a.running && 'ok')}>${a.running ? 'Running' : 'Starts when needed'}</span><span class="pill" style="color: var(--tx-3)">From .env</span></div>
-              <div class="prov-sub"><span class="mono">${a.command}</span> · works in <span class="mono">${a.cwd}</span></div>
+              <div class="prov-sub"><span class="mono">${a.command}</span> · works in <span class="mono">${a.cwd}</span>${a.model ? html` · starts on <span class="mono">${a.model}</span>` : ''}</div>
+              ${a.options && html`<div class="prov-sub">${a.options.filter((o) => o.category === 'model').flatMap((o) => (o.options || []).flatMap((x) => x.options || [x])).map((c) => c.name).join(' · ') || 'No model choice'}</div>`}
             </div>
           </div>
         </div>`)}
@@ -261,26 +274,140 @@ function AddAgent() {
   </section>`;
 }
 
+const Switch = ({ on, label, onChange }) => html`<button class=${cx('sw', on && 'on')} role="switch" aria-checked=${on} aria-label=${label} onClick=${() => onChange(!on)}><span></span></button>`;
+
 function Notifications() {
+  const prefs = useStore((s) => s.chatPrefs);
+  const webhook = useStore((s) => s.config?.webhook);
   const supported = 'Notification' in window;
   const [state, setState] = useState(supported ? Notification.permission : 'unsupported');
   const ask = async () => setState(await Notification.requestPermission());
-  return html`<${Page} title="Notifications" sub="Get told when a reply needs you or finishes while you’re in another tab.">
-    <section class="ssec" style="gap: 0">
-      <div class="srow" style="border-top: 0; padding-top: 0">
-        <div class="lab"><div class="t">Browser notifications</div><div class="sub">${state === 'granted' ? 'On for this browser.' : state === 'denied' ? 'Blocked. Allow notifications for this site in your browser settings.' : state === 'unsupported' ? 'This browser can’t show notifications.' : 'Off. Your browser asks once when you turn them on.'}</div></div>
-        ${state === 'default' ? html`<button class="btn btn-p" onClick=${ask}>Turn on</button>` : html`<span class=${cx('pill', state === 'granted' ? 'ok' : 'warn')}>${state === 'granted' ? 'On' : state === 'denied' ? 'Blocked' : 'Unavailable'}</span>`}
+  const rows = [['notifyWaiting', 'An agent waits for you', 'A permission request or a question'], ['notifyFinish', 'A reply finishes', 'In a chat you’re not looking at'],
+    ['notifyFail', 'Something fails', 'A reply that stopped with an error']];
+  return html`<${Page} title="Notifications" sub="Get told when a reply needs you, finishes or fails while you look elsewhere.">
+    <section class="ssec" style="gap: 14px">
+      <div class="notify-banner"><${Icon} name="notification" style="color: var(--tx-2)" /><div style="flex: 1"><div class="t">${state === 'granted' ? 'Browser notifications are on' : 'Browser notifications are off'}</div>
+        <div class="sub">${state === 'granted' ? 'This browser shows them while the tab is in the background.' : state === 'denied' ? 'Blocked. Allow notifications for this site in your browser settings.' : state === 'unsupported' ? 'This browser can’t show notifications.' : 'Allow them to hear about replies while you’re in another tab.'}</div></div>
+        ${state === 'default' && html`<button class="btn" onClick=${ask}>Allow</button>`}</div>
+      <div role="table" aria-label="What you’re notified about" class="notify-table">
+        <div role="row" class="nrow head"><span role="columnheader">Notify me when</span><span role="columnheader">In app</span><span role="columnheader">Browser</span></div>
+        ${rows.map(([key, title, sub]) => html`<div role="row" class="nrow" key=${key}>
+          <span role="cell"><span class="t" style="display: block; font-size: 13.5px; font-weight: 500">${title}</span><span class="sub">${sub}</span></span>
+          <span role="cell"><button class=${cx('cb', prefs[key] && prefs.inApp && 'on')} role="checkbox" aria-checked=${!!(prefs[key] && prefs.inApp)} aria-label=${`${title}: in app`}
+            onClick=${() => setChatPrefs(prefs[key] && prefs.inApp ? { inApp: false } : { [key]: true, inApp: true })}>${prefs[key] && prefs.inApp && html`<${Icon} name="check" />`}</button></span>
+          <span role="cell"><button class=${cx('cb', prefs[key] && state === 'granted' && 'on')} role="checkbox" aria-checked=${!!(prefs[key] && state === 'granted')} aria-label=${`${title}: browser`}
+            disabled=${state !== 'granted'} style=${state !== 'granted' ? 'opacity: .4' : ''} onClick=${() => setChatPrefs({ [key]: !prefs[key] })}>${prefs[key] && state === 'granted' && html`<${Icon} name="check" />`}</button></span>
+        </div>`)}
       </div>
-      <div class="srow"><div class="lab"><div class="t">When an agent waits for you</div><div class="sub">A permission request or a question.</div></div><span class="pill ok">Always</span></div>
-      <div class="srow"><div class="lab"><div class="t">When a reply finishes</div><div class="sub">Only while the tab is in the background.</div></div><span class="pill ok">Always</span></div>
+      <div class="srow"><div class="lab"><div class="t">Send to a webhook</div><div class="sub">${webhook ? 'On. The server posts to NOTIFY_WEBHOOK when a reply finishes, fails or waits for you, even with every tab closed.' : 'Post to Slack, Teams, ntfy or any URL, even with every tab closed. Set NOTIFY_WEBHOOK in the server’s .env.'}</div></div>
+        <span class=${cx('pill', webhook && 'ok')}>${webhook ? 'On' : 'Off'}</span></div>
     </section>
+  <//>`;
+}
+
+function DefaultTarget() {
+  const config = useStore((s) => s.config);
+  const [value, setValue] = useState(defaultTarget());
+  const all = targets(config);
+  return html`<select class="sel" style="width: 280px" aria-label="Default for new chats" value=${value} onChange=${(e) => { setValue(e.target.value); local.set('defaultTarget', e.target.value); store.set({ draftTarget: e.target.value }); toast('New chats start with it.'); }}>
+    ${all.map((t) => html`<option value=${t.value}>${t.kind === 'agent' ? `Agent · ${t.name}` : `${t.model.provider_name} · ${t.name}`}</option>`)}</select>`;
+}
+
+const LENGTHS = [['', 'Auto'], ['512', '512 tokens'], ['1024', '1,024 tokens'], ['2048', '2,048 tokens'], ['4096', '4,096 tokens'], ['8192', '8,192 tokens'], ['16384', '16,384 tokens']];
+
+function ChatSettings() {
+  const prefs = useStore((s) => s.chatPrefs);
+  const [draft, setDraft] = useState(prefs.instructions);
+  return html`<${Page} title="Chat" sub="How new chats start on this browser. Each chat can change these in its controls.">
+    <section class="ssec" style="gap: 0">
+      <div class="srow" style="border-top: 0; padding-top: 0"><div class="lab"><div class="t">Default for new chats</div><div class="sub">The model or agent the home screen starts with.</div></div><${DefaultTarget} /></div>
+      <div class="srow" style="flex-direction: column; align-items: stretch; gap: 10px">
+        <div><label for="di" class="t" style="font-size: 15px; font-weight: 600">Default instructions</label><div class="sub">Sent with every new model chat. Existing chats keep theirs. Agents have their own.</div></div>
+        <textarea id="di" class="inp" rows="4" style="height: auto; padding: 10px 12px; resize: vertical; line-height: 1.55" value=${draft} maxlength="4000"
+          placeholder="Answer in British English. Keep replies short unless I ask for detail." onInput=${(e) => setDraft(e.target.value)} onBlur=${() => setChatPrefs({ instructions: draft.trim() })}></textarea>
+        <span class="meta" style="align-self: flex-end">${draft.length.toLocaleString()} / 4,000</span>
+      </div>
+      <div class="srow"><div class="lab"><div class="t">Temperature</div><div class="sub">Lower is more predictable.</div></div>
+        <select class="sel" style="width: 200px" aria-label="Temperature" value=${prefs.temperature == null ? '' : String(prefs.temperature)} onChange=${(e) => setChatPrefs({ temperature: e.target.value === '' ? null : +e.target.value })}>
+          <option value="">Model default</option>${['0', '0.3', '0.7', '1', '1.3'].map((t) => html`<option value=${t}>${t}</option>`)}</select></div>
+      <div class="srow"><div class="lab"><div class="t">Maximum reply length</div><div class="sub">Leave on Auto unless replies get cut off.</div></div>
+        <select class="sel" style="width: 200px" aria-label="Maximum reply length" value=${prefs.maxTokens ? String(prefs.maxTokens) : ''} onChange=${(e) => setChatPrefs({ maxTokens: e.target.value ? +e.target.value : null })}>
+          ${LENGTHS.map(([v, l]) => html`<option value=${v}>${l}</option>`)}</select></div>
+      <div class="srow"><div class="lab"><div class="t">Send with Enter</div><div class="sub">${prefs.enterToSend ? 'Shift + Enter adds a new line.' : `${mod}Enter sends; Enter adds a new line.`}</div></div>
+        <${Switch} on=${prefs.enterToSend} label="Send with Enter" onChange=${(v) => setChatPrefs({ enterToSend: v })} /></div>
+      <div class="srow"><div class="lab"><div class="t">Start page</div><div class="sub">What opens when you launch the app.</div></div>
+        <div class="seg" role="radiogroup" aria-label="Start page">${[['new', 'A new chat'], ['last', 'The last chat']].map(([id, label]) => html`<button key=${id} role="radio"
+          aria-checked=${prefs.startPage === id} class=${prefs.startPage === id ? 'on' : ''} onClick=${() => setChatPrefs({ startPage: id })}>${label}</button>`)}</div></div>
+    </section>
+    <section class="card add-card" aria-labelledby="h-reset">
+      <div><h2 id="h-reset" class="h2">Back to the default session</h2><p class="sub">Forget everything this browser remembers: appearance, these chat settings, voice, each agent’s last model, favorites and the default model. Your chats and projects stay on the server.</p></div>
+      <div><button class="btn btn-dq" onClick=${() => confirm({ title: 'Reset this browser?', danger: true, action: 'Reset everything',
+        body: 'Every preference on this browser goes back to its default. Chats and projects are kept.', onConfirm: () => { resetEverything(); setDraft(''); toast('Back to the defaults.'); } })}>
+        <${Icon} name="refresh" />Reset to defaults</button></div>
+    </section>
+  <//>`;
+}
+
+const LANGUAGES = [['', 'Same as the browser'], ['en-US', 'English (US)'], ['en-GB', 'English (UK)'], ['bn-BD', 'Bengali'], ['hi-IN', 'Hindi'], ['es-ES', 'Spanish'],
+  ['fr-FR', 'French'], ['de-DE', 'German'], ['it-IT', 'Italian'], ['pt-BR', 'Portuguese (Brazil)'], ['ar-SA', 'Arabic'], ['ja-JP', 'Japanese'], ['zh-CN', 'Chinese'], ['fi-FI', 'Finnish']];
+
+function Voice() {
+  const prefs = useStore((s) => s.chatPrefs);
+  const [list, setList] = useState(voices());
+  useEffect(() => {
+    if (!canSpeak) return undefined;
+    const update = () => setList(voices());
+    speechSynthesis.addEventListener?.('voiceschanged', update);
+    return () => speechSynthesis.removeEventListener?.('voiceschanged', update);
+  }, []);
+  return html`<${Page} title="Voice" sub="Speak instead of typing, hear replies, or talk hands-free in voice mode. It all runs in your browser; audio never reaches the server.">
+    <section class="ssec" style="gap: 0">
+      <div class="srow" style="border-top: 0; padding-top: 0"><div class="lab"><div class="t">Dictation and voice mode</div><div class="sub">Your words appear in the message box first.</div></div>
+        <span class=${cx('pill', canDictate ? 'ok' : 'warn')}>${canDictate ? 'Browser' : 'Not in this browser'}</span></div>
+      <div class="srow"><div class="lab"><div class="t">Language</div><div class="sub">What you speak.</div></div>
+        <select class="sel" style="width: 220px" aria-label="Language" value=${prefs.voiceLang} onChange=${(e) => setChatPrefs({ voiceLang: e.target.value })}>
+          ${LANGUAGES.map(([v, l]) => html`<option value=${v}>${l}</option>`)}</select></div>
+      <div class="srow"><div class="lab"><div class="t">Read replies aloud</div><div class="sub">Automatically, when a reply finishes in the chat you’re looking at.</div></div>
+        <${Switch} on=${prefs.autoRead} label="Read replies aloud" onChange=${(v) => setChatPrefs({ autoRead: v })} /></div>
+      <div class="srow"><div class="lab"><div class="t">Voice</div><div class="sub">${canSpeak ? 'Used for reading aloud and in voice mode.' : 'This browser can’t read aloud.'}</div></div>
+        <div style="display: flex; gap: 8px">
+          <select class="sel" style="width: 240px" aria-label="Voice" value=${prefs.voiceName} disabled=${!canSpeak} onChange=${(e) => setChatPrefs({ voiceName: e.target.value })}>
+            <option value="">Default</option>${list.map((v) => html`<option value=${v.name}>${v.name} · ${v.lang}</option>`)}</select>
+          <button class="btn" aria-label="Play a sample" disabled=${!canSpeak} onClick=${() => speak('Hello. This is how replies will sound.')}><${Icon} name="play" size=${14} />Try</button>
+        </div></div>
+      <div class="srow"><div class="lab"><div class="t">Speed</div><div class="sub">${prefs.rate.toFixed(1)}×</div></div>
+        <input type="range" min="0.6" max="1.8" step="0.1" value=${prefs.rate} aria-label="Speaking speed" style="width: 240px; accent-color: var(--ac)" onInput=${(e) => setChatPrefs({ rate: +e.target.value })} /></div>
+    </section>
+  <//>`;
+}
+
+function Workspaces() {
+  const config = useStore((s) => s.config);
+  const roots = config?.roots || [];
+  return html`<${Page} title="Workspaces & Git" sub="The folders this server shares with you and its agents. They come from FILES_ROOTS in .env."
+    action=${roots.length > 0 && html`<button class="btn" style="height: 36px" onClick=${() => navigate('#/files')}><${Icon} name="folder-open" />Open files</button>`}>
+    <section class="ssec" style="gap: 10px">
+      <h2 class="h3">Shared folders</h2>
+      ${roots.length === 0 ? html`<div class="card empty-card">No folders are shared. Set FILES_ROOTS in .env (comma-separated paths) and restart.</div>`
+        : html`<div class="card">${roots.map((r, i) => html`<div key=${r.path}>${i > 0 && html`<div class="hr"></div>`}<div class="prov-row">
+          <span class="prov-logo" style="display: grid; place-items: center; background: var(--bg-active); color: var(--tx-2)"><${Icon} name="folder" /></span>
+          <div style="flex: 1; min-width: 0"><div class="prov-name">${r.name}<span class=${cx('pill', r.exists ? 'ok' : 'warn')}>${r.exists ? 'Available' : 'Missing'}</span><span class="pill" style="color: var(--tx-3)">From .env</span></div>
+            <div class="prov-sub mono">${r.path}</div></div>
+          <button class="btn btn-g" disabled=${!r.exists} onClick=${() => navigate(`#/files?path=${encodeURIComponent(r.path)}`)}>Browse</button></div></div>`)}</div>`}
+    </section>
+    <section class="ssec" style="gap: 0">
+      <div class="srow" style="border-top: 0"><div class="lab"><div class="t">Agents stay inside them</div><div class="sub">An agent chat can only open in one of these folders, and its file requests stay in its own folder.</div></div><span class="pill ok">On</span></div>
+      <div class="srow"><div class="lab"><div class="t">Git sign-in</div><div class="sub">Push, pull and clone use the server’s own Git sign-in. Give it a deploy key per repository, or a bot account’s token in a credential helper.</div></div>
+        <span class="pill">Server</span></div>
+    </section>
+    <${EnvSnippet} lines=${['FILES_ROOTS=~/code,~/notes']} />
   <//>`;
 }
 
 function Keyboard() {
   const rows = [[`${mod}N`, 'New chat'], [`${mod}K`, 'Search chats, actions and settings'], [`${mod}M`, 'Switch model'], [`${mod}\\`, 'Collapse or expand the sidebar'],
     ['↵', 'Send, or allow the waiting request'], ['⇧↵', 'New line'], ['Esc', 'Stop the reply, or close the top layer'], ['?', 'Show shortcuts']];
-  return html`<${Page} title="Keyboard" sub="Every shortcut in AgentWebUI Lite.">
+  return html`<${Page} title="Keyboard" sub="Every shortcut, everywhere in the app.">
     <section class="card" style="padding: 4px 16px">${rows.map(([k, d], i) => html`<div class="pr" key=${k} style=${i === 0 ? 'border-top: 0' : ''}>
       <span class="kbd" style="min-width: 52px; text-align: center">${k}</span><span>${d}</span></div>`)}</section>
   <//>`;

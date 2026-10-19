@@ -476,7 +476,9 @@ async def clone_chat(request: web.Request) -> web.Response:
     chat = _chat_or_404(request)
     if chat["id"].startswith("t"):
         return _error(422, "a temporary chat can't be cloned")
-    copy = request.app[STORE].clone_chat(chat["id"], f"{chat['title'] or 'New chat'} (copy)"[:200])
+    upto = (await _body(request)).get("upto") if request.can_read_body else None
+    title = f"{chat['title'] or 'New chat'} ({'branch' if upto else 'copy'})"[:200]
+    copy = request.app[STORE].clone_chat(chat["id"], title, upto if isinstance(upto, int) else None)
     return web.json_response(_live(request.app, copy), status=201)  # type: ignore[arg-type]
 
 
@@ -513,6 +515,7 @@ async def send_message(request: web.Request) -> web.StreamResponse:
         parent = edited["parent"]
     request.app[STORE].claim_files([f["id"] for f in files], chat["id"])
     user = store.add_message(chat["id"], "user", text, meta={"files": files} if files else None, parent=parent)
+    user = next((m for m in store.messages(chat["id"]) if m["id"] == user["id"]), user)  # with its versions
     if not chat["title"]:
         store.update_chat(chat["id"], title=(text.splitlines()[0] if text else files[0]["name"])[:60])
     return await _stream(request, _start(request.app, chat, user, user))
@@ -680,9 +683,20 @@ def _decode(body: dict[str, Any], limit_mb: int) -> bytes:
 
 
 async def upload_file(request: web.Request) -> web.Response:
-    """Attach a file: `{name, type, data}` with the bytes as base64. It belongs to the chat it is sent in."""
+    """Attach a file: `{name, type, data}` with the bytes as base64, or `{path}` of a file in a shared folder.
+    It belongs to the chat it is sent in."""
     body = await _body(request)
-    data = _decode(body, request.app[SETTINGS].upload_mb)
+    settings = request.app[SETTINGS]
+    if body.get("path"):
+        source = workspace.resolve(settings, str(body["path"]))
+        if not source.is_file():
+            return _error(404, "no such file")
+        if source.stat().st_size > settings.upload_mb * 1024 * 1024:
+            return _error(413, f"files can be up to {settings.upload_mb} MB")
+        body = {"name": source.name, "type": body.get("type"), "data": ""}
+        data = source.read_bytes()
+    else:
+        data = _decode(body, settings.upload_mb)
     name = str(body.get("name") or "file")
     mime = str(body.get("type") or mimetypes.guess_type(name)[0] or "application/octet-stream")
     file = _save_blob(request.app, "", name, mime, data, "upload")

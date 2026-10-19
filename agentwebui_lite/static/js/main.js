@@ -1,6 +1,6 @@
 // Boot, layout and global keys. The page opens straight into chat; a password, when set in .env, comes first.
 import { html, render, useEffect, store, useStore, local, cx, api } from './lib.js';
-import { applyPrefs, loadPrefs } from './prefs.js';
+import { applyPrefs, loadPrefs, loadChatPrefs } from './prefs.js';
 import { Sidebar, Rail } from './sidebar.js';
 import { Home } from './home.js';
 import { ChatScreen } from './chat.js';
@@ -10,10 +10,13 @@ import { Palette, Shortcuts } from './palette.js';
 import { Confirm, Toasts, Dialog, closeTopLayer } from './ui.js';
 import { Icon } from './icons.js';
 import { SignIn, SystemState, OfflineBanner, Loading } from './states.js';
-import { loadConfig, loadChats, onRoute, newChat, openPalette, openPicker, toggleSidebar, stop, renameChat, chatTarget, switchModel } from './actions.js';
+import { FilesScreen, FilePicker } from './files.js';
+import { ProjectDialog, MoveDialog } from './projects.js';
+import { VoiceMode } from './voice.js';
+import { loadConfig, loadChats, loadProjects, onRoute, newChat, openPalette, openPicker, toggleSidebar, stop, renameChat, chatTarget, switchModel } from './actions.js';
 
 const prefs = loadPrefs();
-store.set({ prefs, sidebar: local.get('sidebar', 'open') });
+store.set({ prefs, chatPrefs: loadChatPrefs(), sidebar: local.get('sidebar', 'open') });
 applyPrefs(prefs);
 
 function Overlay() {
@@ -26,8 +29,29 @@ function Overlay() {
     case 'shortcuts': return html`<${Shortcuts} onClose=${close} />`;
     case 'confirm': return html`<${Confirm} ...${overlay} onClose=${close} />`;
     case 'rename': return html`<${Rename} ...${overlay} onClose=${close} />`;
+    case 'files': return html`<${FilePicker} ...${overlay} onClose=${close} />`;
+    case 'save': return html`<${FilePicker} mode="save" start=${overlay.folder} name=${overlay.name} content=${overlay.content} onClose=${close} />`;
+    case 'project': return html`<${ProjectDialog} project=${overlay.project} moveChat=${overlay.moveChat} onClose=${close} />`;
+    case 'move': return html`<${MoveDialog} chat=${overlay.chat} onClose=${close} />`;
+    case 'image': return html`<${Lightbox} ...${overlay} onClose=${close} />`;
     default: return null;
   }
+}
+
+function Lightbox({ src, alt, onClose }) {
+  return html`<${Dialog} onClose=${onClose} label=${alt || 'Image'} width=${1100} class="lightbox">
+    <div class="lb-head"><span class="g">${alt || 'Image'}</span>
+      <a class="btn btn-g btn-sm" href=${src} download=${alt || 'image'}><${Icon} name="download" size=${14} />Download</a>
+      <a class="btn btn-g btn-sm" href=${src} target="_blank" rel="noopener">Open</a>
+      <button class="ib" aria-label="Close" onClick=${onClose} data-autofocus><${Icon} name="close" /></button></div>
+    <div class="lb-body"><img src=${src} alt=${alt || ''} /></div>
+  <//>`;
+}
+
+function Voice() {
+  const voice = useStore((s) => s.voice);
+  if (!voice?.active) return null;
+  return html`<${VoiceMode} target=${voice.target} onSend=${voice.send} onClose=${() => store.set({ voice: null })} />`;
 }
 
 function Rename({ id, title, onClose }) {
@@ -46,6 +70,7 @@ function Shell() {
   const screen = route.name === 'home' ? html`<${Home} />`
     : route.name === 'chat' ? html`<${ChatScreen} />`
     : route.name === 'settings' ? html`<${Settings} />`
+    : route.name === 'files' ? html`<${FilesScreen} />`
     : html`<${SystemState} kind="missing" />`;
   if (route.name === 'settings') return html`<div class="shell">${screen}</div>`;
   return html`<div class=${cx('shell', sidebar === 'rail' && 'collapsed')}>
@@ -85,7 +110,10 @@ function App() {
       else if (mod && e.key.toLowerCase() === 'm') {
         e.preventDefault();
         const chat = store.get().chat;
-        openPicker(chat && store.get().route.name === 'chat' ? { value: chatTarget(chat), chat, onPick: (t) => switchModel(chat.id, t) } : {});
+        const route = store.get().route.name;
+        // An agent chat's ⌘M opens the agent's own model menu; elsewhere, the model picker.
+        if ((chat?.kind === 'agent' && route === 'chat') || (route === 'home' && store.get().draftTarget?.startsWith('agent:'))) window.dispatchEvent(new Event('awl:model-menu'));
+        else openPicker(chat && route === 'chat' ? { value: chatTarget(chat), chat, onPick: (t) => switchModel(chat.id, t) } : {});
       }
       else if (mod && e.key === '\\') { e.preventDefault(); toggleSidebar(); }
       else if (e.key === '?' && !typing && !mod) { e.preventDefault(); store.set({ overlay: { type: 'shortcuts' } }); }
@@ -101,7 +129,7 @@ function App() {
   if (bootError) return html`<${SystemState} kind="error" detail=${bootError} />`;
   if (signedIn === false) return html`<${SignIn} /><${Toasts} />`;
   if (!config) return html`<${Loading} />`;
-  return html`<${Shell} /><${Overlay} /><${Toasts} />`;
+  return html`<${Shell} /><${Overlay} /><${Voice} /><${Toasts} />`;
 }
 
 async function boot() {
@@ -109,13 +137,28 @@ async function boot() {
     const session = await api('/api/session');
     store.set({ passwordRequired: session.password_required, signedIn: session.signed_in });
     if (!session.signed_in) return;
-    await loadConfig();
-    await loadChats();
+    const config = await loadConfig();
+    brandDefaults(config.brand);
+    await Promise.all([loadChats(), loadProjects()]);
+    const { chats, chatPrefs } = store.get();
+    if (!location.hash.replace(/^#\/?/, '') && chatPrefs.startPage === 'last' && chats.find((c) => !c.archived)) {
+      history.replaceState(null, '', `#/c/${chats.find((c) => !c.archived).id}`);
+    }
     await onRoute();
   } catch (e) {
     if (e.status === 401) return;
     store.set(e.status === 0 ? { offline: true, bootError: e.message } : { bootError: e.message });
   }
+}
+
+// BRAND_THEME and BRAND_ACCENT in .env are where a browser starts; its own appearance choice wins once made.
+function brandDefaults(brand) {
+  if (!brand || local.get('appearance', null)) return;
+  const next = { ...store.get().prefs };
+  if (['dark', 'light', 'system', 'graphite', 'terminal', 'paper', 'hc'].includes(brand.theme)) next.theme = brand.theme;
+  if (/^#[0-9a-f]{6}$/i.test(brand.accent || '')) Object.assign(next, { theme: 'custom', base: brand.theme === 'light' ? 'light' : 'dark', custom: brand.accent.toLowerCase() });
+  store.set({ prefs: next });
+  applyPrefs(next);
 }
 
 window.addEventListener('error', (e) => console.error(e.error || e.message));
