@@ -83,7 +83,7 @@ class Turn:
             path = unquote(urlsplit(uri).path) if uri.startswith("file:") else ""
             part = {"type": "file", "id": f"link-{len(self.parts)}", "name": str(content.get("name") or _name_of(uri)),
                     "mime": str(content.get("mimeType") or ""), "size": content.get("size"),
-                    "path": path, "url": "" if path else uri}
+                    "path": path, "url": uri if uri.startswith(("https://", "http://")) else ""}
         if part is None:
             return None
         self._add(part)

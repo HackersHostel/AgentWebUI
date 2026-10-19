@@ -466,8 +466,10 @@ async def delete_chat(request: web.Request) -> web.Response:
     chat = _chat_or_404(request)
     if chat["id"] in request.app[TURNS]:
         return _error(409, "stop the reply first")
-    _store(request.app, chat["id"]).delete_chat(chat["id"])
-    for file_id in request.app[STORE].delete_chat(chat["id"]) if chat["id"].startswith("t") else []:
+    files = _store(request.app, chat["id"]).delete_chat(chat["id"])
+    if chat["id"].startswith("t"):  # a temporary chat's files are listed in the main database
+        files += request.app[STORE].delete_chat(chat["id"])
+    for file_id in files:
         _blob(request.app, file_id).unlink(missing_ok=True)
     return web.Response(status=204)
 

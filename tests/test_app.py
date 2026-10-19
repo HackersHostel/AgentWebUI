@@ -8,7 +8,7 @@ import pytest
 
 from agentwebui_lite import config
 from agentwebui_lite.acp import AgentProcess, RpcError, Session
-from agentwebui_lite.server import AGENTS
+from agentwebui_lite.server import AGENTS, SETTINGS
 from agentwebui_lite.config import Agent
 
 from .conftest import events
@@ -454,6 +454,10 @@ async def test_an_env_model_is_where_a_new_agent_chat_starts(settings_for, clien
 
 
 # --- files in and out ---
+def tmp_path_of(client):
+    return client.app[SETTINGS].data_dir
+
+
 def _b64(data: bytes) -> str:
     import base64
     return base64.b64encode(data).decode()
@@ -478,6 +482,9 @@ async def test_a_model_chat_sends_images_and_text_files_as_parts(settings_for, c
     saved = await (await client.get(f"/api/chats/{chat['id']}")).json()
     assert [f["name"] for f in saved["messages"][0]["meta"]["files"]] == ["cat.png", "notes.md"]
     assert (await (await client.get(f"/api/files/{image['id']}")).read()) == b"\x89PNG\r\n"
+    assert (await client.delete(f"/api/chats/{chat['id']}")).status == 204
+    assert (await client.get(f"/api/files/{image['id']}")).status == 404
+    assert not (tmp_path_of(client) / "files" / image["id"]).exists()
 
 
 async def test_an_agent_gets_attachments_as_acp_blocks(settings_for, client_for, monkeypatch, tmp_path):
@@ -783,3 +790,23 @@ def test_an_older_database_gains_versions_and_settings(tmp_path):
     backup = tmp_path / "copy.db"
     store.backup(backup)
     assert Store(backup).get_chat("c1")["title"] == "Old"
+
+
+def test_the_backup_command_copies_the_database(tmp_path, monkeypatch):
+    from agentwebui_lite.__main__ import main
+    from agentwebui_lite.store import Store
+    monkeypatch.setenv("AWL_ENV_FILE", str(tmp_path / "none.env"))
+    monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
+    Store(tmp_path / "data" / "chats.db").create_chat("model", "p/m", title="Keep me")
+    assert main(["backup", str(tmp_path / "copy.db")]) == 0
+    assert Store(tmp_path / "copy.db").list_chats()[0]["title"] == "Keep me"
+    assert main(["nonsense"]) == 2
+
+
+def test_a_file_link_from_an_agent_is_only_ever_a_web_or_local_address():
+    from agentwebui_lite.turns import Turn
+    turn = Turn("c")
+    turn.add_media({"type": "resource_link", "uri": "javascript:alert(1)", "name": "x"})
+    turn.add_media({"type": "resource_link", "uri": "https://example.com/a.pdf", "name": "a.pdf"})
+    turn.add_media({"type": "resource_link", "uri": "file:///work/b%20c.png", "name": "b c.png"})
+    assert [(p["url"], p["path"]) for p in turn.parts] == [("", ""), ("https://example.com/a.pdf", ""), ("", "/work/b c.png")]
