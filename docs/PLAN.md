@@ -67,6 +67,8 @@ output, diffs, seconds) and permission (the question and the answer).
 
 ## Next
 
+The full plan, with white label, Hermes and the VPS deployment, is in [ROADMAP.md](ROADMAP.md).
+
 1. Wire the controls the design draws but Lite does not run yet, as they are wanted (see DESIGN.md).
 2. The agent's own model list and slash commands (modes are done).
 3. Attachments (images and files as ACP content blocks and as model message parts).
