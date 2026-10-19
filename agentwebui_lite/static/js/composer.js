@@ -207,7 +207,9 @@ function AgentBar({ chat, info, cwd, onCwd, live, onPick, draft, onDraft }) {
   const connected = !!(live?.running || chat?.agent?.connected);
   const running = !!live?.running;
   const status = live?.waiting ? ['var(--warn)', 'Waiting for you'] : running ? ['var(--ac-tx)', 'Working'] : connected ? ['var(--ok)', 'Connected'] : ['var(--tx-3)', chat ? 'Starts when you send' : 'Not started'];
-  const hasModel = options ? options.some((o) => o.category === 'model') : !chat && agent && agent.options == null;
+  // LOCK_MODEL: the server sets the model, so there is nothing to choose here.
+  const hasModel = !config?.lock_model && (options ? options.some((o) => o.category === 'model') : !chat && agent && agent.options == null);
+  const folderFixed = !!chat || !!config?.lock_folder;
   useEffect(() => {
     const open = () => { if (hasModel) modelMenu.setOpen(true); };
     window.addEventListener('awl:model-menu', open);
@@ -235,10 +237,10 @@ function AgentBar({ chat, info, cwd, onCwd, live, onPick, draft, onDraft }) {
         title=${running ? 'Change the model after this reply' : 'Model'} disabled=${running}>
         <${Logo} name=${modelMark(options)} size=${14} icon="model" />${options ? modelLabel(options) || 'Model' : 'Model'}<${Icon} name="chevron-down" size=${13} />
       </button>`}
-    <${Icon} name="chevron-right" size=${12} style="color: var(--tx-3)" />
-    <button class="ab" title=${folder} onClick=${chat ? undefined : pickFolder} disabled=${!!chat}>
-      <${Icon} name="folder" size=${14} /><span class="mono-ish">${basename(folder) || 'Folder'}</span>${!chat && html`<${Icon} name="chevron-down" size=${13} />`}
-    </button>
+    ${!config?.lock_folder && html`<${Icon} name="chevron-right" size=${12} style="color: var(--tx-3)" />
+    <button class="ab" title=${folder} onClick=${folderFixed ? undefined : pickFolder} disabled=${folderFixed}>
+      <${Icon} name="folder" size=${14} /><span class="mono-ish">${basename(folder) || 'Folder'}</span>${!folderFixed && html`<${Icon} name="chevron-down" size=${13} />`}
+    </button>`}
     ${modes && modes.available.length > 0 && html`<span class="vsep"></span><button class=${cx('ab', modeMenu.open && 'on')} ref=${modeMenu.ref} aria-haspopup="menu"
         aria-expanded=${modeMenu.open} onClick=${modeMenu.toggle}>
         <${Icon} name="shield" size=${14} />${current?.name || 'Mode'}<${Icon} name="chevron-down" size=${13} />

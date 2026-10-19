@@ -30,10 +30,10 @@ export function ProjectDialog({ project, moveChat, onClose }) {
       <p>Chats in a project start in its folder, with its agent or model and its instructions.</p></div></div>
     <div class="db">
       <div class="f"><label for="pj-name">Name</label><input id="pj-name" class="inp" value=${name} onInput=${(e) => setName(e.target.value)} data-autofocus placeholder="Website redesign" /></div>
-      <div class="f"><label for="pj-folder">Folder on the server</label>
+      ${!config?.lock_folder && html`<div class="f"><label for="pj-folder">Folder on the server</label>
         <div style="display: flex; gap: 8px"><input id="pj-folder" class="inp mono" value=${folder} onInput=${(e) => setFolder(e.target.value)} placeholder="~/code/site" />
           ${config?.roots?.length > 0 && html`<button class="btn" onClick=${browse}>Browse…</button>`}</div>
-        <small>Where agents work. Optional for model chats.</small></div>
+        <small>Where agents work. Optional for model chats.</small></div>`}
       <div class="f"><label for="pj-target">Starts with</label>
         <select id="pj-target" class="sel" value=${target} onChange=${(e) => setTarget(e.target.value)}>
           <option value="">Whatever is chosen on the home screen</option>

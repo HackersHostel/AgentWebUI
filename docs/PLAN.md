@@ -86,6 +86,7 @@ deploy/         install.sh (systemd + Caddy), the unit, the Caddyfile; Dockerfil
 | `GET /api/git/status, diff, log, branches` · `POST /api/git/commit, switch, sync, init, clone` | git inside `FILES_ROOTS` |
 | `GET /api/health`, `/manifest.webmanifest`, `/brand/logo` | open without a password |
 | `GET /api/session`, `POST /api/login`, `POST /api/logout` | only when `PASSWORD` is set |
+| `GET /embed?token=` | one-time sign-in from a page that frames this one (`EMBED_SECRET`); then redirects to `/` |
 
 Events: `user`, `delta`, `thought`, `plan`, `tool`, `part` (a file or the files changed), `permission`,
 `permission_answered`, `modes`, `config`, `commands`, `notice`, `error`, `message` (the saved reply), `end`. A saved

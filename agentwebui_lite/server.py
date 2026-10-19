@@ -30,7 +30,8 @@ log = logging.getLogger("agentwebui_lite")
 STATIC = Path(__file__).parent / "static"
 COOKIE = "awl_session"
 CANCEL_GRACE = 15
-OPEN_PATHS = {"/", "/api/health", "/api/session", "/api/login", "/manifest.webmanifest", "/brand/logo"}
+OPEN_PATHS = {"/", "/embed", "/api/health", "/api/session", "/api/login", "/manifest.webmanifest", "/brand/logo"}
+EMBED_MAX_AGE = 300  # seconds an /embed link may live
 TEXT_INLINE = 200 * 1024  # a text attachment up to this size goes into a model chat as text
 LOGIN_TRIES, LOGIN_WINDOW = 8, 600
 # Shown to a model (with the system prompt) and to an agent (before its first prompt), so a reply can use the
@@ -56,6 +57,7 @@ TOKEN = web.AppKey("token", str)
 HTTP = web.AppKey("http", aiohttp.ClientSession)
 LOGINS = web.AppKey("logins", dict)
 ASSETS = web.AppKey("assets", str)
+EMBEDS = web.AppKey("embeds", dict)  # nonce → expiry of every /embed link already used
 
 
 def create_app(settings: Settings) -> web.Application:
@@ -68,12 +70,15 @@ def create_app(settings: Settings) -> web.Application:
         process.on_options = app[STORE].set_agent_options
     app[TURNS] = {}
     app[LOGINS] = {}
+    app[EMBEDS] = {}
     app[TOKEN] = session_token(settings) if settings.password else ""
     app[ASSETS] = _assets_version()
     app.cleanup_ctx.append(_lifetime)
     app.on_response_prepare.append(_revalidate_assets)
+    app.on_response_prepare.append(_frame_policy)
     app.add_routes([
         web.get("/", index),
+        web.get("/embed", embed),
         web.get("/manifest.webmanifest", manifest),
         web.get("/brand/logo", brand_logo),
         web.get("/api/health", health),
@@ -162,6 +167,55 @@ async def _revalidate_assets(request: web.Request, response: web.StreamResponse)
     modules into a blank page."""
     if request.path.startswith("/assets/"):
         response.headers.setdefault("Cache-Control", "no-cache")
+
+
+async def _frame_policy(request: web.Request, response: web.StreamResponse) -> None:
+    """Only this server, and the pages in FRAME_ANCESTORS, may show these pages in a frame."""
+    rule = " ".join(("frame-ancestors", "'self'", *request.app[SETTINGS].frame_ancestors))
+    policy = response.headers.get("Content-Security-Policy")
+    response.headers["Content-Security-Policy"] = f"{policy}; {rule}" if policy else rule
+
+
+def _cookie_options(request: web.Request) -> dict[str, Any]:
+    """Strict by default. A page that may be framed by another site needs SameSite=None, which needs Secure."""
+    if request.app[SETTINGS].frame_ancestors:
+        return {"httponly": True, "samesite": "None", "secure": True}
+    return {"httponly": True, "samesite": "Strict", "secure": _secure(request)}
+
+
+def embed_link_token(secret: str, now: float | None = None, nonce: str | None = None) -> str:
+    """A one-time sign-in link's token, as a framing page makes it: base64url JSON {exp, nonce}, a dot, then the
+    hex HMAC-SHA256 of that text with EMBED_SECRET. Here for the tests and for anyone writing the other side."""
+    payload = json.dumps({"exp": int((now or time.time()) + 60), "nonce": nonce or secrets.token_hex(16)})
+    text = base64.urlsafe_b64encode(payload.encode()).decode().rstrip("=")
+    return f"{text}.{hmac.new(secret.encode(), text.encode(), hashlib.sha256).hexdigest()}"
+
+
+async def embed(request: web.Request) -> web.Response:
+    """Sign the browser in from a one-time link (`/embed?token=…`) that a page framing this one made with
+    EMBED_SECRET, then open the app. Each link works once and for at most five minutes."""
+    settings = request.app[SETTINGS]
+    if not settings.embed_secret:
+        return _error(404, "this server has no EMBED_SECRET")
+    text, _, signature = request.query.get("token", "").partition(".")
+    expected = hmac.new(settings.embed_secret.encode(), text.encode(), hashlib.sha256).hexdigest()
+    if not text or not hmac.compare_digest(signature, expected):
+        return _error(401, "this link is not valid")
+    try:
+        claims = json.loads(base64.urlsafe_b64decode(text + "=" * (-len(text) % 4)))
+        expires, nonce = int(claims["exp"]), str(claims["nonce"])
+    except (ValueError, KeyError, TypeError, binascii.Error):
+        return _error(401, "this link is not valid")
+    now = time.time()
+    used = request.app[EMBEDS]
+    for old in [n for n, e in used.items() if e < now]:
+        del used[old]
+    if expires < now or expires > now + EMBED_MAX_AGE or nonce in used:
+        return _error(401, "this link has expired; open the chat again")
+    used[nonce] = expires
+    response = web.Response(status=302, headers={"Location": "/", "Cache-Control": "no-store"})
+    response.set_cookie(COOKIE, request.app[TOKEN], max_age=60 * 60 * 24 * 30, **_cookie_options(request))
+    return response
 
 
 def session_token(settings: Settings) -> str:
@@ -299,14 +353,13 @@ async def login(request: web.Request) -> web.Response:
         return _error(401, "wrong password")
     tries.pop(ip, None)
     response = web.json_response({"signed_in": True})
-    response.set_cookie(COOKIE, request.app[TOKEN], httponly=True, samesite="Strict", secure=_secure(request),
-                        max_age=60 * 60 * 24 * 30)
+    response.set_cookie(COOKIE, request.app[TOKEN], max_age=60 * 60 * 24 * 30, **_cookie_options(request))
     return response
 
 
 async def logout(request: web.Request) -> web.Response:
     response = web.json_response({"signed_in": False})
-    response.del_cookie(COOKIE)
+    response.del_cookie(COOKIE, **_cookie_options(request))
     return response
 
 
@@ -332,6 +385,8 @@ async def config(request: web.Request) -> web.Response:
         "webhook": bool(settings.notify_webhook),
         "brand": {"name": settings.brand_name, "logo": "/brand/logo", "greeting": settings.brand_greeting,
                   "accent": settings.brand_accent, "theme": settings.brand_theme},
+        "lock_model": settings.lock_model,
+        "lock_folder": settings.lock_folder,
         "version": __version__,
     })
 
@@ -405,7 +460,8 @@ async def create_chat(request: web.Request) -> web.Response:
         agent = settings.agent(target)
         if agent is None:
             return _error(422, f"unknown agent {target!r}")
-        cwd = os.path.expanduser(str(body.get("cwd") or (project and project["folder"]) or agent.cwd))
+        chosen = None if settings.lock_folder else body.get("cwd") or (project and project["folder"])
+        cwd = os.path.expanduser(str(chosen or agent.cwd))
         if not os.path.isdir(cwd):
             return _error(422, f"{cwd} is not a folder")
         cwd = str(Path(cwd).resolve())
@@ -413,6 +469,8 @@ async def create_chat(request: web.Request) -> web.Response:
             return _error(403, f"{cwd} is outside the folders this server shares (FILES_ROOTS)")
         raw = body.get("config")
         chat_config = {str(k): v for k, v in raw.items() if isinstance(v, (str, bool))} if isinstance(raw, dict) else {}
+        if settings.lock_model:
+            chat_config = {k: v for k, v in chat_config.items() if not _is_model_option(store.agent_options(agent.id), k)}
         if agent.model and "model" not in chat_config:
             chat_config["model"] = agent.model
     else:
@@ -421,6 +479,11 @@ async def create_chat(request: web.Request) -> web.Response:
     chat = (request.app[TEMP] if temporary else store).create_chat(
         kind, target, cwd, str(body.get("title") or "")[:200], chat_config, project_id, "t" if temporary else "")
     return web.json_response(_live(request.app, chat), status=201)
+
+
+def _is_model_option(options: list[dict[str, Any]] | None, option_id: str) -> bool:
+    """Whether an agent option picks the model: the legacy `model` id, or an option in the model category."""
+    return option_id == "model" or any(o.get("id") == option_id and o.get("category") == "model" for o in options or [])
 
 
 def _overlay(options: list[dict[str, Any]] | None, values: dict[str, Any]) -> list[dict[str, Any]] | None:
@@ -609,6 +672,10 @@ async def set_config(request: web.Request) -> web.Response:
     store = _store(request.app, chat["id"])
     process = request.app[AGENTS].get(chat["target"])
     session = process.sessions.get(chat["session_id"]) if process and process.running else None
+    if request.app[SETTINGS].lock_model and _is_model_option(
+            (session.config if session is not None else None) or request.app[STORE].agent_options(chat["target"]),
+            config_id):
+        return _error(403, "this agent's model is set by the server")
     values = dict(chat["config"])
     if session is not None and session.config is not None:
         try:

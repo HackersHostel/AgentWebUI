@@ -15,7 +15,7 @@ function entries(config, hidden = {}) {
     desc: m.local ? `Runs on ${providers.get(m.provider)?.host || 'this machine'}. Nothing leaves your network.` : `Served by ${providers.get(m.provider)?.name || m.provider} through your key.`,
   }));
   for (const a of config.agents) {
-    const models = a.options && a.options.filter((o) => o.category === 'model').flatMap((o) => (o.options || []).flatMap((x) => x.options || [x]));
+    const models = !config.lock_model && a.options && a.options.filter((o) => o.category === 'model').flatMap((o) => (o.options || []).flatMap((x) => x.options || [x]));
     items.push({ value: `agent:${a.id}`, name: a.name, raw: a.command, group: '__agents', local: true, kind: 'agent',
       badge: 'Agent', logo: AGENT_GRADIENT, mark: agentLogo(a), cwd: a.cwd, models,
       desc: `An external agent. It works in a folder on this computer (${basename(a.cwd)} by default) and asks before changing files.` });
@@ -108,7 +108,7 @@ export function ModelPicker({ value, onPick, chat, tab: initialTab, onClose }) {
       </div>
       ${hotItem.kind === 'agent' && html`<div><div class="cap" style="margin-bottom: 6px">Models</div>
         ${hotItem.models?.length ? html`<div style="display: flex; flex-wrap: wrap; gap: 6px">${hotItem.models.map((m) => html`<span class="tn" key=${m.value} title=${m.description}>${m.name}</span>`)}</div>`
-          : html`<div class="sub" style="margin: 0">${hotItem.models ? 'This agent offers no model choice.' : 'Pick the model after choosing the agent: the agent bar shows its models.'}</div>`}</div>`}
+          : html`<div class="sub" style="margin: 0">${config.lock_model ? 'The server sets this agent’s model.' : hotItem.models ? 'This agent offers no model choice.' : 'Pick the model after choosing the agent: the agent bar shows its models.'}</div>`}</div>`}
       <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px">
         <button class="btn btn-p" style="height: 36px" onClick=${() => use(hotItem)}>Use ${hotItem.name}</button>
         <button class="btn" style="height: 36px" onClick=${() => toggleFav(hotItem)}>
