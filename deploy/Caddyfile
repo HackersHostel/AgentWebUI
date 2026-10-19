@@ -1,0 +1,15 @@
+# HTTPS in front of AgentWebUI Lite. Caddy gets and renews the certificate for the domain by itself.
+# The app needs TRUST_PROXY=true in .env so its cookie is marked secure.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy {$UPSTREAM:127.0.0.1:3000} {
+		# Replies stream as server-sent events: pass every byte on at once.
+		flush_interval -1
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		-Server
+	}
+}
