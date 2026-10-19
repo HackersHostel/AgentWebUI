@@ -22,15 +22,27 @@ export function Menu({ anchor, onClose, children, width, align = 'start', label,
   const ref = useRef(null);
   const [pos, setPos] = useState(null);
   useLayer(onClose);
-  useLayoutEffect(() => {
+  // Placed after every render, since the content can grow (a model list arriving after "Starting…"). It opens on its
+  // side unless it only fits on the other, and never runs off the screen: it gets the room there and scrolls.
+  const place = () => {
     const a = anchor.current?.getBoundingClientRect();
     const m = ref.current;
     if (!a || !m) return;
-    const mh = m.offsetHeight, mw = m.offsetWidth;
-    const up = forceUp ?? (a.bottom + mh + 8 > innerHeight && a.top - mh - 8 > 0);
+    const want = m.scrollHeight, mw = m.offsetWidth;
+    const above = a.top - 14, below = innerHeight - a.bottom - 14;
+    let up = forceUp ?? (want > below && above > below);
+    if (up && want > above && below > above) up = false;
+    else if (!up && want > below && above > below) up = true;
+    const height = Math.min(want, up ? above : below, 520);
     let left = align === 'end' ? a.right - mw : a.left;
     left = Math.max(8, Math.min(left, innerWidth - mw - 8));
-    setPos({ left, top: up ? a.top - mh - 6 : a.bottom + 6, up });
+    const next = { left, top: up ? a.top - height - 6 : a.bottom + 6, up, height };
+    setPos((p) => (p && p.left === next.left && p.top === next.top && p.height === next.height ? p : next));
+  };
+  useLayoutEffect(place);
+  useEffect(() => {
+    addEventListener('resize', place);
+    return () => removeEventListener('resize', place);
   }, []);
   useEffect(() => {
     const away = (e) => {
@@ -50,10 +62,10 @@ export function Menu({ anchor, onClose, children, width, align = 'start', label,
     if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length]?.focus(); }
     if (e.key === 'Tab') onClose();
   };
-  const place = pos ? `left: ${pos.left}px; top: ${pos.top}px;` : 'left: -9999px; top: 0;';
+  const at = pos ? `left: ${pos.left}px; top: ${pos.top}px; max-height: ${pos.height}px; overflow-y: auto;` : 'left: -9999px; top: 0;';
   return html`<div ref=${ref} class=${cx('menu', pos?.up && 'up', klass)} role="menu" aria-label=${label}
     onKeyDown=${onKey} onClick=${(e) => e.target.closest('[data-close]') && onClose()}
-    style=${`position: fixed; ${place} ${width ? `width: ${width}px;` : ''} ${style || ''}`}>${children}</div>`;
+    style=${`position: fixed; ${at} ${width ? `width: ${width}px;` : ''} ${style || ''}`}>${children}</div>`;
 }
 
 export function MenuItem({ icon, children, onClick, keys, danger, checked, radio, desc, disabled }) {
