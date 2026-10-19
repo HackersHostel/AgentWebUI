@@ -2,7 +2,8 @@
 
 Models:  PROVIDER_<ID>_URL, PROVIDER_<ID>_KEY, PROVIDER_<ID>_MODELS (comma list; else asked from <url>/models),
          PROVIDER_<ID>_NAME
-Agents:  AGENT_<ID>_COMMAND (an ACP agent's command line), AGENT_<ID>_NAME, AGENT_<ID>_CWD
+Agents:  AGENT_<ID>_COMMAND (an ACP agent's command line), AGENT_<ID>_NAME, AGENT_<ID>_CWD, AGENT_<ID>_MODEL
+Files:   FILES_ROOTS (folders the file manager may open and agents may work in; else WORKSPACE_DIR and agent folders)
 A value may name another variable as ${NAME}, so keys can stay in the shell environment.
 """
 from __future__ import annotations
@@ -37,6 +38,7 @@ class Agent:
     name: str
     command: tuple[str, ...]
     cwd: str
+    model: str = ""  # the model a new chat starts on when the browser has no choice saved
 
 
 @dataclass(frozen=True)
@@ -51,12 +53,37 @@ class Settings:
     agent_idle_minutes: float = 10
     providers: tuple[Provider, ...] = ()
     agents: tuple[Agent, ...] = field(default_factory=tuple)
+    files_roots: tuple[str, ...] = ()
+    trust_proxy: bool = False
+    notify_webhook: str = ""
+    rich_replies: bool = True
+    upload_mb: int = 25
+    brand_name: str = "AgentWebUI"
+    brand_logo: str = ""
+    brand_greeting: str = ""
+    brand_accent: str = ""
+    brand_theme: str = ""
 
     def provider(self, provider_id: str) -> Provider | None:
         return next((p for p in self.providers if p.id == provider_id), None)
 
     def agent(self, agent_id: str) -> Agent | None:
         return next((a for a in self.agents if a.id == agent_id), None)
+
+    @property
+    def roots(self) -> tuple[str, ...]:
+        """Where the file manager may look and agents may work: FILES_ROOTS, or the folders .env already names."""
+        if self.files_roots:
+            return self.files_roots
+        found: list[str] = []
+        for folder in (self.workspace, *(a.cwd for a in self.agents)):
+            if folder and folder not in found:
+                found.append(folder)
+        return tuple(found)
+
+    def allowed(self, path: str) -> bool:
+        resolved = Path(path).resolve()
+        return any(resolved == Path(root).resolve() or Path(root).resolve() in resolved.parents for root in self.roots)
 
 
 def read_env_file(path: Path) -> dict[str, str]:
@@ -106,22 +133,34 @@ def load(env_file: Path | None = None, environ: dict[str, str] | None = None) ->
             if not command:
                 raise ConfigError(f"AGENT_{ident.upper()}_COMMAND is missing")
             agents.append(Agent(ident, values.get("NAME") or ident, command,
-                                os.path.expanduser(values.get("CWD") or workspace)))
+                                os.path.expanduser(values.get("CWD") or workspace), values.get("MODEL", "")))
 
     try:
         port = int(env.get("PORT", "3000"))
         idle = float(env.get("AGENT_IDLE_MINUTES", "10"))
+        upload_mb = int(env.get("UPLOAD_MB", "25"))
     except ValueError as exc:
         raise ConfigError(f"not a number: {exc}") from None
+    roots = tuple(str(Path(os.path.expanduser(r.strip())).resolve())
+                  for r in env.get("FILES_ROOTS", "").split(",") if r.strip())
     settings = Settings(
         host=env.get("HOST", "127.0.0.1"), port=port, data_dir=Path(env.get("DATA_DIR", "data")),
         password=env.get("PASSWORD", ""), user_name=env.get("USER_NAME", "").strip()[:60],
         system_prompt=env.get("SYSTEM_PROMPT", ""),
         workspace=os.path.expanduser(workspace), agent_idle_minutes=idle,
-        providers=tuple(providers), agents=tuple(agents))
+        providers=tuple(providers), agents=tuple(agents), files_roots=roots,
+        trust_proxy=_yes(env.get("TRUST_PROXY", "")), notify_webhook=env.get("NOTIFY_WEBHOOK", "").strip(),
+        rich_replies=_yes(env.get("RICH_REPLIES", "true")), upload_mb=max(upload_mb, 1),
+        brand_name=env.get("BRAND_NAME", "").strip()[:40] or "AgentWebUI", brand_logo=env.get("BRAND_LOGO", "").strip(),
+        brand_greeting=env.get("BRAND_GREETING", "").strip()[:120], brand_accent=env.get("BRAND_ACCENT", "").strip(),
+        brand_theme=env.get("BRAND_THEME", "").strip())
     if not settings.password and not is_loopback(settings.host):
         raise ConfigError(f"HOST={settings.host} is reachable from other machines: set PASSWORD in .env")
     return settings
+
+
+def _yes(value: str) -> bool:
+    return value.strip().lower() in ("1", "true", "yes", "on")
 
 
 def is_loopback(host: str) -> bool:

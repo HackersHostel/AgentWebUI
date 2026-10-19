@@ -1,5 +1,7 @@
 // App states (System states board): not found, page error, offline banner, loading, and sign in.
 import { html, useState, store, useStore, api, copyText } from './lib.js';
+
+const brandName = () => document.title || 'AgentWebUI';
 import { Icon } from './icons.js';
 import { newChat, openPalette } from './actions.js';
 
@@ -52,10 +54,10 @@ export function SignIn() {
   };
   return html`<div class="signin">
     <main class="signin-main">
-      <div class="signin-brand"><img src="/assets/logo.svg" alt="" width="26" height="26" style="border-radius: 8px" /><span>AgentWebUI</span></div>
+      <div class="signin-brand"><img src="/brand/logo" alt="" width="26" height="26" style="border-radius: 8px" /><span>${brandName()}</span></div>
       <div class="signin-center">
         <div class="signin-form">
-          <div><h1>Welcome back</h1><p>Sign in to your AgentWebUI server.</p></div>
+          <div><h1>Welcome back</h1><p>Sign in to your ${brandName()} server.</p></div>
           <form onSubmit=${submit} style="display: flex; flex-direction: column; gap: 14px">
             <div class="f"><label for="pw">Password</label>
               <input id="pw" class=${error ? 'inp err' : 'inp'} type="password" autocomplete="current-password" value=${password}
@@ -70,7 +72,7 @@ export function SignIn() {
     </main>
     <aside class="brandside" aria-hidden="true">
       <div class="preview">
-        <div class="pv-side"><div style="display: flex; align-items: center; gap: 6px"><img src="/assets/logo.svg" alt="" width="14" height="14" style="border-radius: 4px" /><span class="ln" style="width: 60px"></span></div>
+        <div class="pv-side"><div style="display: flex; align-items: center; gap: 6px"><img src="/brand/logo" alt="" width="14" height="14" style="border-radius: 4px" /><span class="ln" style="width: 60px"></span></div>
           <span class="ln" style="width: 80%; margin-top: 14px"></span><span style="height: 22px; border-radius: 6px; background: var(--bg-active)"></span>
           <span class="ln faint" style="width: 70%"></span><span class="ln faint" style="width: 85%"></span><span class="ln faint" style="width: 60%"></span></div>
         <div class="pv-main"><span style="align-self: flex-end; height: 30px; width: 46%; border-radius: 14px; background: var(--bg-active)"></span>

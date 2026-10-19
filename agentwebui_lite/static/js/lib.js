@@ -67,9 +67,9 @@ function createStore(initial) {
 
 export const store = createStore({
   signedIn: null, passwordRequired: false,
-  config: null, chats: [], route: { name: 'home' },
+  config: null, chats: [], projects: [], route: { name: 'home' },
   chat: null, live: {}, sidebar: 'open', drawer: false,
-  inspector: null, overlay: null, toasts: [], offline: false,
+  inspector: null, overlay: null, toasts: [], offline: false, voice: null,
 });
 
 function shallowEqual(a, b) {
@@ -108,9 +108,6 @@ export function toast(text, { action, onAction, ms } = {}) {
   setTimeout(() => store.set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), ms || (action ? 6000 : 4000));
 }
 
-// For controls the design shows but Lite does not run.
-export const notInLite = (what) => () => toast(`${what} isn’t part of AgentWebUI Lite.`);
-
 export const cx = (...parts) => parts.filter(Boolean).join(' ');
 
 export function navigate(hash) {
@@ -148,6 +145,12 @@ export function secs(value) {
   return value < 10 ? `${value.toFixed(1)} s` : value < 60 ? `${Math.round(value)} s` : `${Math.floor(value / 60)}m ${Math.round(value % 60)}s`;
 }
 
+export function dirname(path) {
+  const s = String(path || '');
+  const i = s.lastIndexOf('/');
+  return i > 0 ? s.slice(0, i) : '/';
+}
+
 export const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 export const mod = isMac ? '⌘' : 'Ctrl+';
 
@@ -155,6 +158,40 @@ export function basename(path) {
   const parts = String(path || '').split(/[\\/]/).filter(Boolean);
   return parts[parts.length - 1] || path || '';
 }
+
+export function size(bytes) {
+  if (bytes == null) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes < 10240 ? 1 : 0)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+// The bytes of a File as base64, for the JSON upload endpoints.
+export function readBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',', 2)[1] || '');
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+// Save text or a Blob as a file in the browser's downloads.
+export function saveFile(name, content, type = 'text/plain') {
+  const blob = content instanceof Blob ? content : new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+export const isImage = (mime) => /^image\/(png|jpe?g|gif|webp|svg\+xml|avif|bmp)$/.test(mime || '');
+export const fileUrl = (id, download) => `/api/files/${id}${download ? '?download=1' : ''}`;
+export const rawUrl = (path, download) => `/api/fs/raw?path=${encodeURIComponent(path)}${download ? '&download=1' : ''}`;
 
 export async function copyText(text) {
   try { await navigator.clipboard.writeText(text); toast('Copied.'); }

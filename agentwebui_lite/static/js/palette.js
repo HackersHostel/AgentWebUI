@@ -2,7 +2,7 @@
 import { html, useState, useEffect, useRef, store, useStore, api, navigate, dayGroup, mod } from './lib.js';
 import { Icon } from './icons.js';
 import { Dialog } from './ui.js';
-import { newChat, openPicker, toggleSidebar } from './actions.js';
+import { newChat, openPicker, toggleSidebar, exportChat } from './actions.js';
 import { setPrefs } from './prefs.js';
 
 export function Palette({ onClose }) {
@@ -22,12 +22,20 @@ export function Palette({ onClose }) {
   const actions = [
     { label: 'New chat', keys: `${mod}N`, icon: 'plus', run: () => newChat() },
     ...(config?.agents || []).map((a) => ({ label: `New chat with ${a.name}`, icon: 'agent', run: () => newChat(`agent:${a.id}`) })),
+    { label: 'New temporary chat', icon: 'temporary', run: () => newChat(undefined, { temporary: true }) },
+    { label: 'New project', icon: 'layers', run: () => store.set({ overlay: { type: 'project' } }) },
+    ...(config?.roots?.length ? [{ label: 'Open files', icon: 'folder', run: () => navigate('#/files') }] : []),
+    ...(store.get().chat && store.get().route.name === 'chat' ? [{ label: 'Export this chat as Markdown', icon: 'export', run: () => exportChat(store.get().chat.id, 'md') }] : []),
     { label: 'Switch model', keys: `${mod}M`, icon: 'sparkle', run: () => openPicker() },
     { label: 'Toggle sidebar', keys: `${mod}\\`, icon: 'panel', run: toggleSidebar },
     { label: light ? 'Switch to dark theme' : 'Switch to light theme', icon: light ? 'moon' : 'sun', run: () => setPrefs({ theme: light ? 'dark' : 'light' }) },
   ];
   const settings = [
+    { label: 'Chat settings and defaults', icon: 'chat', run: () => navigate('#/settings/chat') },
     { label: 'Providers and agents', icon: 'plug', run: () => navigate('#/settings/providers') },
+    { label: 'Voice', icon: 'mic', run: () => navigate('#/settings/voice') },
+    { label: 'Notifications', icon: 'notification', run: () => navigate('#/settings/notifications') },
+    { label: 'Workspaces & Git', icon: 'workspace', run: () => navigate('#/settings/workspaces') },
     { label: 'Appearance', icon: 'sun', run: () => navigate('#/settings/appearance') },
     { label: 'Keyboard shortcuts', keys: '?', icon: 'key', run: () => store.set({ overlay: { type: 'shortcuts' } }) },
   ];

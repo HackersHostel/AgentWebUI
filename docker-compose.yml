@@ -1,0 +1,32 @@
+# AgentWebUI Lite behind Caddy (HTTPS). Put PASSWORD, providers and agents in .env next to this file, set DOMAIN,
+# then: docker compose up -d. Sign agents in once: docker compose exec app claude  (and: codex login --device-auth)
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      DATA_DIR: /data
+      WORKSPACE_DIR: /work
+      FILES_ROOTS: /work
+      TRUST_PROXY: "true"
+    volumes:
+      - data:/data
+      - ./work:/work
+      - home:/home/agentwebui
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN, the name that points at this server}
+      UPSTREAM: app:3000
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy:/data
+    depends_on: [app]
+volumes:
+  data:
+  home:
+  caddy:

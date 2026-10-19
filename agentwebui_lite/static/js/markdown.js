@@ -3,9 +3,18 @@
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-function safeUrl(url) {
+// Set while a reply is parsed: turns a path in the agent's folder into a URL the server serves (sandboxed).
+let resolveLocal = null;
+
+function safeUrl(url, image = false) {
   const u = url.trim().replace(/^<|>$/g, '');
-  return /^(https?:|mailto:)/i.test(u) ? esc(u) : null;
+  if (/^(https?:|mailto:)/i.test(u)) return esc(u);
+  if (image && /^data:image\/(png|jpe?g|gif|webp|avif);base64,[a-z0-9+/=]+$/i.test(u)) return esc(u);
+  if (resolveLocal && (/^file:\/\//i.test(u) || !/^[a-z][a-z0-9+.-]*:/i.test(u)) && !u.startsWith('#')) {
+    const local = resolveLocal(decodeURI(u.replace(/^file:\/\//i, '')));
+    return local ? esc(local) : null;
+  }
+  return null;
 }
 
 function inline(text) {
@@ -16,8 +25,8 @@ function inline(text) {
   });
   s = esc(s);
   s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;[^&]*&quot;)?\)/g, (m, alt, url) => {
-    const u = safeUrl(url.replace(/&amp;/g, '&'));
-    return u ? `<img src="${u}" alt="${alt}" loading="lazy" referrerpolicy="no-referrer">` : m;
+    const u = safeUrl(url.replace(/&amp;/g, '&'), true);
+    return u ? `<img src="${u}" alt="${alt}" loading="lazy" referrerpolicy="no-referrer" data-zoom="1">` : m;
   });
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;[^&]*&quot;)?\)/g, (m, label, url) => {
     const u = safeUrl(url.replace(/&amp;/g, '&'));
@@ -70,15 +79,21 @@ function list(lines) {
   return out.join('');
 }
 
-// -> [{ type: 'html', html } | { type: 'code', lang, code, open }]
-export function parse(source) {
+// -> [{ type: 'html', html } | { type: 'code', lang, info, code, open }]. `resolve` maps a local path to a URL.
+export function parse(source, resolve = null) {
+  const before = resolveLocal;
+  resolveLocal = resolve;
+  try { return parseBlocks(source); } finally { resolveLocal = before; }
+}
+
+function parseBlocks(source) {
   const lines = String(source || '').replace(/\r\n?/g, '\n').split('\n');
   const blocks = [];
   let buf = [];
   const flush = () => { if (buf.length) blocks.push({ type: 'html', html: buf.join('') }); buf = []; };
   for (let i = 0; i < lines.length;) {
     const line = lines[i];
-    const fence = line.match(/^\s*(```+|~~~+)\s*([\w+#.-]*)/);
+    const fence = line.match(/^\s*(```+|~~~+)\s*([\w+#.-]*)(.*)$/);
     if (fence) {
       flush();
       const close = new RegExp(`^\\s*${fence[1][0] === '`' ? '`' : '~'}{${fence[1].length},}\\s*$`);
@@ -87,7 +102,7 @@ export function parse(source) {
       while (i < lines.length && !close.test(lines[i])) code.push(lines[i++]);
       const open = i >= lines.length;
       i++;
-      blocks.push({ type: 'code', lang: fence[2] || '', code: code.join('\n'), open });
+      blocks.push({ type: 'code', lang: fence[2] || '', info: (fence[3] || '').trim(), code: code.join('\n'), open });
       continue;
     }
     if (!line.trim()) { i++; continue; }
@@ -102,7 +117,7 @@ export function parse(source) {
     if (/^\s*>/.test(line)) {
       const quote = [];
       while (i < lines.length && /^\s*>/.test(lines[i])) quote.push(lines[i++].replace(/^\s*>\s?/, ''));
-      buf.push(`<blockquote>${parse(quote.join('\n')).map((b) => (b.type === 'html' ? b.html : `<pre><code>${esc(b.code)}</code></pre>`)).join('')}</blockquote>`);
+      buf.push(`<blockquote>${parseBlocks(quote.join('\n')).map((b) => (b.type === 'html' ? b.html : `<pre><code>${esc(b.code)}</code></pre>`)).join('')}</blockquote>`);
       continue;
     }
     if (line.includes('|') && i + 1 < lines.length && /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(lines[i + 1])) {

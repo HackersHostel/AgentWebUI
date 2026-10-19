@@ -6,16 +6,17 @@ import { newChat } from './actions.js';
 
 const DOT = ['#3a8ee6', '#3dd68c', '#b3a4ff', '#ffb38a', '#5fd4c4', '#f783ac'];
 
-function entries(config) {
+function entries(config, hidden = {}) {
   const providers = new Map(config.providers.map((p, i) => [p.id, { ...p, color: p.local ? '#a1a1aa' : DOT[i % DOT.length] }]));
-  const items = config.models.map((m) => ({
+  const items = config.models.filter((m) => !hidden[`model:${m.id}`]).map((m) => ({
     value: `model:${m.id}`, name: m.model, raw: m.model, group: m.provider, local: m.local, kind: 'model',
     badge: m.local ? 'Local' : '', logo: providerGradient(m.provider, m.local),
     desc: m.local ? `Runs on ${providers.get(m.provider)?.host || 'this machine'}. Nothing leaves your network.` : `Served by ${providers.get(m.provider)?.name || m.provider} through your key.`,
   }));
   for (const a of config.agents) {
+    const models = a.options && a.options.filter((o) => o.category === 'model').flatMap((o) => (o.options || []).flatMap((x) => x.options || [x]));
     items.push({ value: `agent:${a.id}`, name: a.name, raw: a.command, group: '__agents', local: true, kind: 'agent',
-      badge: 'Agent', logo: AGENT_GRADIENT, cwd: a.cwd,
+      badge: 'Agent', logo: AGENT_GRADIENT, cwd: a.cwd, models,
       desc: `An external agent. It works in a folder on this computer (${basename(a.cwd)} by default) and asks before changing files.` });
   }
   const groups = [...providers.values()].map((p) => ({ id: p.id, name: p.name, sub: `OpenAI-compatible · ${p.host}`, color: p.color, where: p.local ? 'This network' : `${p.name}, through your key` }));
@@ -25,10 +26,11 @@ function entries(config) {
 
 export function ModelPicker({ value, onPick, chat, tab: initialTab, onClose }) {
   const config = useStore((s) => s.config);
+  const hidden = useStore((s) => s.chatPrefs?.hiddenModels || {});
   const [q, setQ] = useState('');
   const [tab, setTab] = useState(initialTab || 'all');
   const [favs, setFavs] = useState(() => local.get('favorites', {}));
-  const { items, groups } = useMemo(() => entries(config), [config]);
+  const { items, groups } = useMemo(() => entries(config, hidden), [config, hidden]);
   const lockKind = chat ? chat.kind : null;
   const needle = q.trim().toLowerCase();
   const visible = items.filter((m) => {
@@ -101,8 +103,11 @@ export function ModelPicker({ value, onPick, chat, tab: initialTab, onClose }) {
       <div class="kv-list small">
         <div><span>Provider</span><span>${hotGroup?.name}</span></div>
         <div><span>Runs</span><span>${hotGroup?.where}</span></div>
-        <div><span>Can</span><span>${hotItem.kind === 'agent' ? 'read and edit files, run commands' : 'chat'}</span></div>
+        <div><span>Can</span><span>${hotItem.kind === 'agent' ? 'read and edit files, run commands' : 'chat, read images and files'}</span></div>
       </div>
+      ${hotItem.kind === 'agent' && html`<div><div class="cap" style="margin-bottom: 6px">Models</div>
+        ${hotItem.models?.length ? html`<div style="display: flex; flex-wrap: wrap; gap: 6px">${hotItem.models.map((m) => html`<span class="tn" key=${m.value} title=${m.description}>${m.name}</span>`)}</div>`
+          : html`<div class="sub" style="margin: 0">${hotItem.models ? 'This agent offers no model choice.' : 'Pick the model after choosing the agent: the agent bar shows its models.'}</div>`}</div>`}
       <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px">
         <button class="btn btn-p" style="height: 36px" onClick=${() => use(hotItem)}>Use ${hotItem.name}</button>
         <button class="btn" style="height: 36px" onClick=${() => toggleFav(hotItem)}>

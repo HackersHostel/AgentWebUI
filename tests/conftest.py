@@ -47,7 +47,7 @@ def make_settings(tmp_path: Path, fake_openai=None, mode: str = "full", password
     providers = (Provider("local", "Local", str(fake_openai.make_url("/v1")).rstrip("/")),) if fake_openai else ()
     agents = (Agent("fake", "Fake agent", (sys.executable, FAKE_AGENT), str(tmp_path)),)
     return Settings(data_dir=tmp_path / "data", password=password, providers=providers, agents=agents,
-                    workspace=str(tmp_path), **extra)
+                    workspace=str(tmp_path), **{"rich_replies": False, **extra})
 
 
 @pytest.fixture

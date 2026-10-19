@@ -83,13 +83,15 @@ class Providers:
         self._models[provider.id] = (time.monotonic(), names, error)
         return names, error
 
-    async def stream(self, target: str, history: list[dict[str, str]]) -> AsyncIterator[tuple[str, Any]]:
-        """Yield ("delta", text), ("thought", text) and finally ("usage", dict) for one reply."""
+    async def stream(self, target: str, history: list[dict[str, Any]],
+                     params: dict[str, Any] | None = None) -> AsyncIterator[tuple[str, Any]]:
+        """Yield ("delta", text), ("thought", text), ("finish", reason) and finally ("usage", dict) for one reply."""
         provider_id, _, model = target.partition("/")
         provider = self.providers.get(provider_id)
         if provider is None or not model:
             raise ProviderError(f"unknown model {target!r}")
-        body = {"model": model, "messages": history, "stream": True, "stream_options": {"include_usage": True}}
+        body = {"model": model, "messages": history, "stream": True, "stream_options": {"include_usage": True},
+                **(params or {})}
         timeout = aiohttp.ClientTimeout(total=None, sock_connect=15, sock_read=300)
         try:
             async with self.http.post(f"{provider.url}/chat/completions", json=body,
@@ -116,6 +118,8 @@ class Providers:
                             yield "thought", thought
                         if isinstance(delta.get("content"), str) and delta["content"]:
                             yield "delta", delta["content"]
+                        if choice.get("finish_reason"):
+                            yield "finish", str(choice["finish_reason"])
                     if isinstance(chunk.get("usage"), dict):
                         yield "usage", chunk["usage"]
         except (aiohttp.ClientError, TimeoutError) as exc:
