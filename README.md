@@ -1,4 +1,4 @@
-# AgentWebUI Light
+# AgentWebUI Lite
 
 One small web page to chat with AI models and with command-line agents. Open it and chat: there is no setup screen
 and no accounts. Everything is configured in `.env`.
@@ -18,7 +18,7 @@ Needs Python 3.11+.
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e .
 cp .env.example .env        # then turn on a model provider or an agent
-.venv/bin/agentwebui-light  # http://127.0.0.1:3000
+.venv/bin/agentwebui-lite  # http://127.0.0.1:3000
 ```
 
 Run the tests with `.venv/bin/pip install -e '.[dev]' && .venv/bin/pytest`.
@@ -51,5 +51,5 @@ built-in agent builder. Agents bring their own tools, memory and MCP servers. Se
 
 ## Status
 
-The page in `agentwebui_light/static/` is a plain placeholder. The designed client replaces it and talks to the same
+The page in `agentwebui_lite/static/` is a plain placeholder. The designed client replaces it and talks to the same
 API.

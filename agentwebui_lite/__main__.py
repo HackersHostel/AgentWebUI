@@ -1,4 +1,4 @@
-"""`python -m agentwebui_light` or `agentwebui-light`: read .env and serve."""
+"""`python -m agentwebui_lite` or `agentwebui-lite`: read .env and serve."""
 from __future__ import annotations
 
 import logging
@@ -16,9 +16,9 @@ def main() -> int:
     try:
         settings = config.load()
     except config.ConfigError as exc:
-        print(f"agentwebui-light: {exc}", file=sys.stderr)
+        print(f"agentwebui-lite: {exc}", file=sys.stderr)
         return 2
-    log = logging.getLogger("agentwebui_light")
+    log = logging.getLogger("agentwebui_lite")
     log.info("%d model provider(s), %d agent(s); data in %s", len(settings.providers), len(settings.agents),
              settings.data_dir.resolve())
     if not settings.providers and not settings.agents:

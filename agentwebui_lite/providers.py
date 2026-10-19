@@ -11,7 +11,7 @@ import aiohttp
 
 from .config import Provider
 
-log = logging.getLogger("agentwebui_light")
+log = logging.getLogger("agentwebui_lite")
 MODELS_TTL = 300
 
 

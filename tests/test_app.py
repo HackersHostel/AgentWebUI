@@ -6,10 +6,10 @@ import sys
 
 import pytest
 
-from agentwebui_light import config
-from agentwebui_light.acp import AgentProcess, RpcError, Session
-from agentwebui_light.server import AGENTS
-from agentwebui_light.config import Agent
+from agentwebui_lite import config
+from agentwebui_lite.acp import AgentProcess, RpcError, Session
+from agentwebui_lite.server import AGENTS
+from agentwebui_lite.config import Agent
 
 from .conftest import events
 

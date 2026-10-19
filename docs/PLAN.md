@@ -1,6 +1,6 @@
 # Plan
 
-AgentWebUI Light replaces the full AgentWebUI for one job: a web interface for AI models and command-line agents.
+AgentWebUI Lite replaces the full AgentWebUI for one job: a web interface for AI models and command-line agents.
 The full product is about 120,000 lines across 29 feature points; this keeps two features and the minimum around
 them.
 
@@ -35,7 +35,7 @@ plugins · PostgreSQL, Redis, S3 · import/export · offline app.
 ## Shape
 
 ```
-agentwebui_light/
+agentwebui_lite/
   config.py     .env → Settings (providers, agents)
   providers.py  OpenAI-compatible model listing and streaming
   acp.py        ACP client: JSON-RPC over stdio, agent processes, sessions, permission and file requests

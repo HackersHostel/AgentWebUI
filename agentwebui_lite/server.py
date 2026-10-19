@@ -21,7 +21,7 @@ from .providers import ProviderError, Providers
 from .store import Store
 from .turns import Turn
 
-log = logging.getLogger("agentwebui_light")
+log = logging.getLogger("agentwebui_lite")
 STATIC = Path(__file__).parent / "static"
 COOKIE = "awl_session"
 CANCEL_GRACE = 15
