@@ -23,8 +23,10 @@ export function ProjectDialog({ project, moveChat, onClose }) {
     if (moveChat) moveToProject(moveChat, saved.id);
     else if (!project) store.set({ draftProject: saved.id });
   };
-  const browse = () => store.set({ overlay: { type: 'files', mode: 'folder', start: folder, title: 'The project’s folder',
-    onPick: (path) => store.set({ overlay: { type: 'project', project: { ...(project || {}), name, folder: path, target, instructions }, moveChat } }) } });
+  // The picker replaces this dialog; it comes back with what was typed, and the chosen folder when there is one.
+  const draft = () => ({ type: 'project', project: { ...(project || {}), name, folder, target, instructions }, moveChat });
+  const browse = () => store.set({ overlay: { type: 'files', mode: 'folder', start: folder, title: 'The project’s folder', back: draft(),
+    onPick: (path) => store.set({ overlay: { ...draft(), project: { ...draft().project, folder: path } } }) } });
   return html`<${Dialog} onClose=${onClose} label=${project?.id ? 'Edit project' : 'New project'} width=${520}>
     <div class="dh"><span class="ico"><${Icon} name="layers" /></span><div><h3>${project?.id ? 'Edit project' : 'New project'}</h3>
       <p>Chats in a project start in its folder, with its agent or model and its instructions.</p></div></div>
