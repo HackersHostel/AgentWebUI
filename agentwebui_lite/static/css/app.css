@@ -176,6 +176,10 @@ a.crumb-root:hover { background: var(--bg-hover); color: var(--tx); }
 .picker-group .gsub { margin-left: auto; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row { display: flex; align-items: center; gap: 10px; width: 100%; height: 40px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--tx); font: inherit; text-align: left; cursor: pointer; }
 .row .logo { width: 22px; height: 22px; border-radius: 6px; flex: none; }
+.logo-tile { display: inline-grid; place-items: center; flex: none; background: var(--bg-raised); border: 1px solid var(--line); color: var(--tx); overflow: hidden; }
+.logo-tile.plain { border: 0; color: #fff; }
+.logo-glyph { display: block; flex: none; object-fit: contain; }
+.row-mark { display: inline-flex; flex: none; color: var(--tx-3); }
 .row-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 500; }
 .row-name > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row-check { width: 18px; display: grid; place-items: center; color: var(--ac-tx); }

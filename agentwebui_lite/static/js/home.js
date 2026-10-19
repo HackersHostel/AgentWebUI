@@ -1,6 +1,7 @@
 // New chat home (Home board): greeting, the big composer, starters and recent chats. A temporary chat starts here too.
 import { html, useState, useEffect, store, useStore, greeting, ago, navigate, basename, cx, local } from './lib.js';
 import { Icon } from './icons.js';
+import { Logo, targetLogo } from './logos.js';
 import { Composer, startingConfig } from './composer.js';
 import { defaultTarget, describeTarget, openPalette } from './actions.js';
 
@@ -72,8 +73,8 @@ export function Home() {
         ${recent.length > 0 && !temporary && html`<div class="recent">
           <div class="recent-head"><span>Jump back in</span><a href="#" onClick=${(e) => { e.preventDefault(); openPalette(); }}>All chats</a></div>
           <div class="tiles">${recent.map((chat) => html`<a class="tile" key=${chat.id} href=${`#/c/${chat.id}`}>
-            <span class="tile-kind"><${Icon} name=${chat.kind === 'agent' ? 'agent' : 'chat'} size=${14} />
-              ${chat.kind === 'agent' ? `${describeTarget(`agent:${chat.target}`, config)?.name || 'Agent'} · ${basename(chat.cwd)}` : 'Chat'}</span>
+            <span class="tile-kind"><${Logo} name=${targetLogo(`${chat.kind}:${chat.target}`, config)} size=${14} icon=${chat.kind === 'agent' ? 'agent' : 'chat'} />
+              ${chat.kind === 'agent' ? `${describeTarget(`agent:${chat.target}`, config)?.name || 'Agent'} · ${basename(chat.cwd)}` : describeTarget(`model:${chat.target}`, config)?.name || 'Chat'}</span>
             <span class="tile-title">${chat.title || 'New chat'}</span>
             <span class="tile-sub">${chat.waiting ? 'Waiting for you' : chat.running ? 'Replying now' : ago(chat.updated_at)}</span>
           </a>`)}</div>

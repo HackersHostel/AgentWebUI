@@ -1,6 +1,7 @@
 // Model picker (Model picker board): models from every provider in .env and the external agents, searchable.
 import { html, useState, useMemo, useRef, useEffect, store, useStore, local, navigate, providerGradient, AGENT_GRADIENT, basename } from './lib.js';
 import { Icon } from './icons.js';
+import { Logo, agentLogo, modelLogo, providerLogo } from './logos.js';
 import { Dialog } from './ui.js';
 import { newChat } from './actions.js';
 
@@ -10,13 +11,13 @@ function entries(config, hidden = {}) {
   const providers = new Map(config.providers.map((p, i) => [p.id, { ...p, color: p.local ? '#a1a1aa' : DOT[i % DOT.length] }]));
   const items = config.models.filter((m) => !hidden[`model:${m.id}`]).map((m) => ({
     value: `model:${m.id}`, name: m.model, raw: m.model, group: m.provider, local: m.local, kind: 'model',
-    badge: m.local ? 'Local' : '', logo: providerGradient(m.provider, m.local),
+    badge: m.local ? 'Local' : '', logo: providerGradient(m.provider, m.local), mark: modelLogo(m.model) || providerLogo(providers.get(m.provider)),
     desc: m.local ? `Runs on ${providers.get(m.provider)?.host || 'this machine'}. Nothing leaves your network.` : `Served by ${providers.get(m.provider)?.name || m.provider} through your key.`,
   }));
   for (const a of config.agents) {
     const models = a.options && a.options.filter((o) => o.category === 'model').flatMap((o) => (o.options || []).flatMap((x) => x.options || [x]));
     items.push({ value: `agent:${a.id}`, name: a.name, raw: a.command, group: '__agents', local: true, kind: 'agent',
-      badge: 'Agent', logo: AGENT_GRADIENT, cwd: a.cwd, models,
+      badge: 'Agent', logo: AGENT_GRADIENT, mark: agentLogo(a), cwd: a.cwd, models,
       desc: `An external agent. It works in a folder on this computer (${basename(a.cwd)} by default) and asks before changing files.` });
   }
   const groups = [...providers.values()].map((p) => ({ id: p.id, name: p.name, sub: `OpenAI-compatible · ${p.host}`, color: p.color, where: p.local ? 'This network' : `${p.name}, through your key` }));
@@ -80,7 +81,7 @@ export function ModelPicker({ value, onPick, chat, tab: initialTab, onClose }) {
           <div class="picker-group"><span style=${`width: 6px; height: 6px; border-radius: 50%; background: ${g.color}`}></span>${g.name}<span class="gsub">${g.sub}</span></div>
           ${g.items.map((m) => html`<button key=${m.value} class="row" role="option" aria-selected=${m.value === value} data-hot=${m.value === hotItem?.value ? '1' : '0'}
             style=${m.value === hotItem?.value ? 'background: var(--bg-active)' : ''} onClick=${() => use(m)} onMouseEnter=${() => setHot(m.value)}>
-            <span class="logo" style=${`background: ${m.logo}`}></span>
+            <${Logo} name=${m.mark} tile size=${22} radius=${6} fallback=${m.logo} />
             <span class="row-name"><span>${m.name}</span>${m.badge && html`<span class="badge">${m.badge}</span>`}${favs[m.value] && html`<${Icon} name="star" size=${12} style="fill: var(--warn); color: var(--warn)" />`}</span>
             <span class="row-check">${m.value === value && html`<${Icon} name="check" />`}</span>
           </button>`)}
@@ -95,7 +96,7 @@ export function ModelPicker({ value, onPick, chat, tab: initialTab, onClose }) {
     </div>
     ${hotItem && html`<div class="picker-detail">
       <div style="display: flex; flex-direction: column; gap: 10px">
-        <span style=${`width: 40px; height: 40px; border-radius: 11px; background: ${hotItem.logo}`}></span>
+        <${Logo} name=${hotItem.mark} tile size=${40} radius=${11} fallback=${hotItem.logo} />
         <div><div style="font-size: 16px; font-weight: 600; letter-spacing: -0.01em">${hotItem.name}</div>
           <div class="mono" style="font-size: 11.5px; color: var(--tx-3); margin-top: 2px; word-break: break-all">${hotItem.raw}</div></div>
         <p style="margin: 0; font-size: 13px; line-height: 1.55; color: var(--tx-2)">${hotItem.desc}</p>

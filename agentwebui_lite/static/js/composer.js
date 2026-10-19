@@ -1,6 +1,7 @@
 // The composer (Main, Home, ChatMore, Agent chat and Agent blocks boards): Send turns into Stop while a reply runs.
 import { html, useState, useRef, useEffect, useLayoutEffect, store, useStore, cx, basename, providerGradient, AGENT_GRADIENT, local, toast, api } from './lib.js';
 import { Icon } from './icons.js';
+import { Logo, targetLogo, agentLogo, modelLogo } from './logos.js';
 import { Menu, MenuItem, MenuHead, MenuSep, useToggle } from './ui.js';
 import { send, stop, describeTarget, openPicker, setMode, setConfig, loadAgentOptions, upload, optionChoices, choiceName } from './actions.js';
 import { Attachments } from './messages.js';
@@ -8,9 +9,10 @@ import { useDictation, canDictate } from './voice.js';
 
 export function TargetButton({ value, onClick, big }) {
   const info = describeTarget(value);
+  const mark = targetLogo(value, store.get().config);
   const gradient = !info ? 'var(--bg-active)' : info.kind === 'agent' ? AGENT_GRADIENT : providerGradient(info.model?.provider, info.model?.local);
   return html`<button class="target-btn" style=${big ? 'height: 32px' : ''} onClick=${onClick} aria-haspopup="dialog" title="Switch model">
-    <span class="tdot" style=${`background: ${gradient}`}></span>
+    ${mark ? html`<${Logo} name=${mark} size=${16} />` : html`<span class="tdot" style=${`background: ${gradient}`}></span>`}
     <span class="tname">${info ? info.name : 'Choose a model'}</span>
     <${Icon} name="chevron-down" size=${14} style="color: var(--tx-3)" />
   </button>`;
@@ -180,6 +182,12 @@ function agentOptions(chat, live, agent, draft) {
 
 const CATEGORY_ORDER = { model: 0, thought_level: 1, model_config: 2 };
 
+// The logo of the model the agent is set to, from its name ("Opus 5.5", "gpt-5.5").
+function modelMark(options) {
+  const model = options?.find((o) => o.category === 'model' && o.type === 'select');
+  return model ? modelLogo(`${choiceName(model) || ''} ${model.currentValue || ''}`) : null;
+}
+
 function modelLabel(options) {
   const model = options.find((o) => o.category === 'model' && o.type === 'select');
   const effort = options.find((o) => o.category === 'thought_level' && o.type === 'select');
@@ -220,12 +228,12 @@ function AgentBar({ chat, info, cwd, onCwd, live, onPick, draft, onDraft }) {
   const pickFolder = () => store.set({ overlay: { type: 'files', mode: 'folder', start: cwd, onPick: onCwd, title: `Where should ${info.name} work?` } });
   return html`<div class="agent-bar">
     <button class="ab" onClick=${chat ? undefined : onPick} disabled=${!!chat} title=${chat ? info.name : 'Choose an agent'}>
-      <${Icon} name="agent" size=${14} />${info.name}${!chat && html`<${Icon} name="chevron-down" size=${13} />`}
+      <${Logo} name=${agentLogo(agent)} size=${14} icon="agent" />${info.name}${!chat && html`<${Icon} name="chevron-down" size=${13} />`}
     </button>
     ${hasModel && html`<${Icon} name="chevron-right" size=${12} style="color: var(--tx-3)" />
       <button class=${cx('ab', modelMenu.open && 'on')} ref=${modelMenu.ref} aria-haspopup="menu" aria-expanded=${modelMenu.open} onClick=${openModels}
         title=${running ? 'Change the model after this reply' : 'Model'} disabled=${running}>
-        <${Icon} name="model" size=${14} />${options ? modelLabel(options) || 'Model' : 'Model'}<${Icon} name="chevron-down" size=${13} />
+        <${Logo} name=${modelMark(options)} size=${14} icon="model" />${options ? modelLabel(options) || 'Model' : 'Model'}<${Icon} name="chevron-down" size=${13} />
       </button>`}
     <${Icon} name="chevron-right" size=${12} style="color: var(--tx-3)" />
     <button class="ab" title=${folder} onClick=${chat ? undefined : pickFolder} disabled=${!!chat}>

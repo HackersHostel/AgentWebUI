@@ -760,6 +760,15 @@ async def test_the_page_loads_the_client_from_an_address_that_changes_with_it(se
     assert '"/assets/css/' not in page
 
 
+async def test_every_logo_the_client_names_is_served(settings_for, client_for):
+    from agentwebui_lite.server import STATIC
+    client = await client_for(settings_for())
+    names = re.findall(r"'([\w-]+\.(?:svg|png))'", (STATIC / "js" / "logos.js").read_text())
+    assert len(names) >= 19
+    for name in names:
+        assert (await client.get(f"/assets/logos/{name}")).status == 200, name
+
+
 async def test_a_webhook_hears_when_a_reply_finishes(settings_for, client_for, fake_openai, aiohttp_server):
     from aiohttp import web as aioweb
     heard = []

@@ -3,6 +3,7 @@
 // in this browser.
 import { html, useState, useEffect, store, useStore, cx, navigate, copyText, api, providerGradient, AGENT_GRADIENT, mod, toast, local } from './lib.js';
 import { Icon } from './icons.js';
+import { Logo, agentLogo, providerLogo } from './logos.js';
 import { THEMES, SWATCHES, FONTS, CODES, SIZES, ACCENTS, setPrefs, customVars, setChatPrefs, resetEverything } from './prefs.js';
 import { loadConfig, targets, defaultTarget } from './actions.js';
 import { canDictate, canSpeak, voices, speak } from './voice.js';
@@ -182,7 +183,7 @@ function Providers() {
         ${providers.map((p, i) => html`<div key=${p.id}>
           ${i > 0 && html`<div class="hr"></div>`}
           <div class="prov-row">
-            <span class="prov-logo" style=${`background: ${providerGradient(p.id, p.local)}`}></span>
+            <${Logo} name=${providerLogo(p)} tile size=${40} radius=${10} fallback=${providerGradient(p.id, p.local)} />
             <div style="flex: 1; min-width: 0">
               <div class="prov-name"><span>${p.name}</span>
                 ${p.error ? html`<span class="pill warn"><${Icon} name="unverified" />Not answering</span>`
@@ -217,7 +218,7 @@ function Providers() {
         ${agents.map((a, i) => html`<div key=${a.id}>
           ${i > 0 && html`<div class="hr"></div>`}
           <div class="prov-row">
-            <span class="prov-logo" style=${`background: ${AGENT_GRADIENT}; display: grid; place-items: center; color: #fff`}><${Icon} name="agent" /></span>
+            <${Logo} name=${agentLogo(a)} tile size=${40} radius=${10} fallback=${AGENT_GRADIENT} icon="agent" iconSize=${20} />
             <div style="flex: 1; min-width: 0">
               <div class="prov-name"><span>${a.name}</span>
                 <span class=${cx('pill', a.running && 'ok')}>${a.running ? 'Running' : 'Starts when needed'}</span><span class="pill" style="color: var(--tx-3)">From .env</span></div>

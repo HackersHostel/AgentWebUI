@@ -2,6 +2,7 @@
 // small screens.
 import { html, useState, useRef, useEffect, store, useStore, cx, dayGroup, navigate, mod, api, toast, local } from './lib.js';
 import { Icon } from './icons.js';
+import { Logo, targetLogo } from './logos.js';
 import { Menu, MenuItem, MenuSep, confirm, useToggle } from './ui.js';
 import { renameChat, deleteChat, openPalette, openPicker, toggleSidebar, newChat, pinChat, archiveChat, cloneChat, exportChat } from './actions.js';
 import { startInProject } from './projects.js';
@@ -112,7 +113,7 @@ function ChatRow({ chat, on, live, go }) {
   return html`<div class=${cx('row-wrap', menu.open && 'menu-open')}>
     <a class=${cx('nav', on && 'on')} href=${`#/c/${chat.id}`} aria-current=${on ? 'page' : undefined}
       onClick=${(e) => { e.preventDefault(); go(); }} title=${chat.title || 'New chat'}>
-      ${chat.kind === 'agent' && html`<${Icon} name="agent" size=${14} style="color: var(--tx-3)" />`}
+      <span class="row-mark"><${Logo} name=${targetLogo(`${chat.kind}:${chat.target}`, store.get().config)} size=${14} icon=${chat.kind === 'agent' ? 'agent' : 'chat'} /></span>
       <span class="t">${chat.title || 'New chat'}</span>
       ${waiting
         ? html`<span class="dot" title="Waiting for you" style="background: var(--warn)"></span>`
