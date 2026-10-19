@@ -1,11 +1,13 @@
 """Any OpenAI-compatible chat completions API: OpenAI, OpenRouter, Ollama, LM Studio, vLLM, Groq, and others."""
 from __future__ import annotations
 
+import ipaddress
 import json
 import logging
 import time
 from collections.abc import AsyncIterator
 from typing import Any
+from urllib.parse import urlsplit
 
 import aiohttp
 
@@ -25,25 +27,43 @@ class Providers:
         self.http = http
         self._models: dict[str, tuple[float, list[str], str]] = {}
 
+    def forget(self) -> None:
+        """Ask every provider for its models again on the next look."""
+        self._models.clear()
+
     def _headers(self, provider: Provider) -> dict[str, str]:
         return {"Authorization": f"Bearer {provider.key}"} if provider.key else {}
 
     async def models(self) -> list[dict[str, Any]]:
-        """Every model of every provider, as `{id: "<provider>/<model>", ...}`. A provider that fails says why."""
+        """Every model of every provider, as `{id: "<provider>/<model>", ...}`."""
         out = []
         for provider in self.providers.values():
-            names, error = await self._models_of(provider)
+            names, _ = await self._models_of(provider)
+            local = is_local(provider.url)
             for name in names:
                 out.append({"id": f"{provider.id}/{name}", "provider": provider.id,
-                            "provider_name": provider.name, "model": name})
-            if error:
-                out.append({"id": f"{provider.id}/", "provider": provider.id, "provider_name": provider.name,
-                            "model": "", "error": error})
+                            "provider_name": provider.name, "model": name, "local": local})
+        return out
+
+    async def summary(self) -> list[dict[str, Any]]:
+        """Each provider as the settings page shows it: where it is, how many models, and why it failed."""
+        out = []
+        for provider in self.providers.values():
+            names, error = await self._fetch(provider)
+            if provider.models:
+                names = list(provider.models)
+            out.append({"id": provider.id, "name": provider.name, "host": urlsplit(provider.url).netloc,
+                        "url": provider.url, "local": is_local(provider.url), "has_key": bool(provider.key),
+                        "listed": bool(provider.models), "models": len(names), "error": error})
         return out
 
     async def _models_of(self, provider: Provider) -> tuple[list[str], str]:
         if provider.models:
             return list(provider.models), ""
+        return await self._fetch(provider)
+
+    async def _fetch(self, provider: Provider) -> tuple[list[str], str]:
+        """The provider's own model list, cached for a few minutes. Also tells whether it answers at all."""
         cached = self._models.get(provider.id)
         if cached and time.monotonic() - cached[0] < MODELS_TTL:
             return cached[1], cached[2]
@@ -100,6 +120,17 @@ class Providers:
                         yield "usage", chunk["usage"]
         except (aiohttp.ClientError, TimeoutError) as exc:
             raise ProviderError(f"{provider.name} could not be reached ({type(exc).__name__})") from None
+
+
+def is_local(url: str) -> bool:
+    host = (urlsplit(url).hostname or "").lower()
+    if host in ("localhost", "host.docker.internal") or host.endswith(".local"):
+        return True
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return address.is_loopback or address.is_private
 
 
 def _error_text(text: str) -> str:

@@ -144,6 +144,14 @@ class Session:
         self.cwd = cwd
         self.turn: Turn | None = None
         self.loading = False
+        self.modes: dict[str, Any] | None = None  # {"current": id, "available": [{id, name, description}]}
+
+    def set_modes(self, raw: Any) -> None:
+        if isinstance(raw, dict) and isinstance(raw.get("availableModes"), list):
+            self.modes = {"current": str(raw.get("currentModeId") or ""),
+                          "available": [{"id": str(m.get("id")), "name": str(m.get("name") or m.get("id")),
+                                         "description": str(m.get("description") or "")}
+                                        for m in raw["availableModes"] if isinstance(m, dict) and m.get("id")]}
 
 
 class AgentProcess:
@@ -223,7 +231,8 @@ class AgentProcess:
             session.loading = True  # the agent replays the history as updates; the chat already has it
             self.sessions[session_id] = session
             try:
-                await self.rpc.request("session/load", {"sessionId": session_id, **params})
+                loaded = await self.rpc.request("session/load", {"sessionId": session_id, **params})
+                session.set_modes((loaded or {}).get("modes"))
                 return session_id, session, False
             except (RpcError, TimeoutError):
                 self.sessions.pop(session_id, None)
@@ -237,6 +246,7 @@ class AgentProcess:
         if not new_id:
             raise AgentError(f"{self.spec.name} did not return a session")
         session = Session(cwd)
+        session.set_modes((result or {}).get("modes"))
         self.sessions[new_id] = session
         return new_id, session, bool(session_id)
 
@@ -257,6 +267,24 @@ class AgentProcess:
         if self.rpc:
             self.rpc.notify("session/cancel", {"sessionId": session_id})
 
+    async def set_mode(self, session_id: str, mode_id: str) -> dict[str, Any] | None:
+        session = self.sessions.get(session_id)
+        if session is None or self.rpc is None or session.modes is None:
+            raise AgentError(f"{self.spec.name} is not running this chat right now")
+        if mode_id not in {m["id"] for m in session.modes["available"]}:
+            raise AgentError(f"{self.spec.name} has no mode {mode_id!r}")
+        try:
+            await self.rpc.request("session/set_mode", {"sessionId": session_id, "modeId": mode_id})
+        except (RpcError, TimeoutError) as exc:
+            raise AgentError(self._why(exc)) from None
+        session.modes["current"] = mode_id
+        return session.modes
+
+    def state(self, session_id: str) -> dict[str, Any]:
+        session = self.sessions.get(session_id) if self.running else None
+        return {"connected": session is not None, "running": self.running,
+                "modes": session.modes if session else None}
+
     def _why(self, exc: Exception) -> str:
         if isinstance(exc, TimeoutError):
             return f"{self.spec.name} did not answer in time"
@@ -276,8 +304,15 @@ class AgentProcess:
         if method != "session/update":
             return
         session = self.sessions.get(str(params.get("sessionId")))
-        if session and session.turn and not session.loading and isinstance(params.get("update"), dict):
-            session.turn.apply(params["update"])
+        update = params.get("update")
+        if session is None or not isinstance(update, dict):
+            return
+        if update.get("sessionUpdate") == "current_mode_update" and session.modes is not None:
+            session.modes["current"] = str(update.get("currentModeId") or session.modes["current"])
+            if session.turn:
+                session.turn.emit("modes", modes=session.modes)
+        elif session.turn and not session.loading:
+            session.turn.apply(update)
 
     async def _permission(self, params: dict[str, Any]) -> dict[str, Any]:
         session = self.sessions.get(str(params.get("sessionId")))

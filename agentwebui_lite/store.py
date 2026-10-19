@@ -61,13 +61,42 @@ class Store:
         return self.get_chat(chat_id)  # type: ignore[return-value]
 
     def update_chat(self, chat_id: str, **fields: Any) -> None:
-        allowed = {key: value for key, value in fields.items() if key in ("title", "session_id")}
+        allowed = {key: value for key, value in fields.items() if key in ("title", "session_id", "target")}
         allowed["updated_at"] = time.time()
         assignments = ", ".join(f"{key} = ?" for key in allowed)
         self.db.execute(f"UPDATE chats SET {assignments} WHERE id = ?", (*allowed.values(), chat_id))
 
     def delete_chat(self, chat_id: str) -> bool:
         return self.db.execute("DELETE FROM chats WHERE id = ?", (chat_id,)).rowcount > 0
+
+    def search(self, query: str, limit: int = 30) -> list[dict[str, Any]]:
+        """Chats whose title or messages contain `query`, newest first, with a snippet around the first hit."""
+        needle = query.strip()
+        if not needle:
+            return []
+        like = "%" + needle.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        rows = self.db.execute(
+            "SELECT c.*, (SELECT content FROM messages m WHERE m.chat_id = c.id AND m.content LIKE ? ESCAPE '\\' "
+            "ORDER BY m.id LIMIT 1) AS hit FROM chats c WHERE c.title LIKE ? ESCAPE '\\' OR EXISTS (SELECT 1 FROM "
+            "messages m WHERE m.chat_id = c.id AND m.content LIKE ? ESCAPE '\\') ORDER BY c.updated_at DESC LIMIT ?",
+            (like, like, like, limit)).fetchall()
+        out = []
+        for row in rows:
+            chat = dict(row)
+            hit = chat.pop("hit") or ""
+            snippet = ""
+            if hit and needle.lower() not in chat["title"].lower():
+                at = hit.lower().find(needle.lower())
+                start = max(at - 40, 0)
+                snippet = ("…" if start else "") + " ".join(hit[start:at + len(needle) + 60].split()) + "…"
+            out.append({**chat, "snippet": snippet, "in_title": needle.lower() in chat["title"].lower()})
+        return out
+
+    def delete_last_reply(self, chat_id: str) -> None:
+        row = self.db.execute("SELECT id, role FROM messages WHERE chat_id = ? ORDER BY id DESC LIMIT 1",
+                              (chat_id,)).fetchone()
+        if row and row["role"] == "assistant":
+            self.db.execute("DELETE FROM messages WHERE id = ?", (row["id"],))
 
     def messages(self, chat_id: str) -> list[dict[str, Any]]:
         rows = self.db.execute("SELECT * FROM messages WHERE chat_id = ? ORDER BY id", (chat_id,)).fetchall()

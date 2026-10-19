@@ -54,7 +54,13 @@ def main() -> None:
         elif method == "session/new":
             session = f"sess-{len(sessions) + 1}"
             sessions[session] = params["cwd"]
-            send({"jsonrpc": "2.0", "id": number, "result": {"sessionId": session}})
+            send({"jsonrpc": "2.0", "id": number, "result": {"sessionId": session, "modes": {
+                "currentModeId": "ask", "availableModes": [
+                    {"id": "ask", "name": "Ask first", "description": "Asks before every edit"},
+                    {"id": "code", "name": "Edit files"}]}}})
+        elif method == "session/set_mode":
+            send({"jsonrpc": "2.0", "id": number, "result": {}})
+            note(params["sessionId"], {"sessionUpdate": "current_mode_update", "currentModeId": params["modeId"]})
         elif method == "session/load":
             sessions[params["sessionId"]] = params["cwd"]
             note(params["sessionId"], {"sessionUpdate": "agent_message_chunk",
@@ -82,7 +88,7 @@ def full_turn(session: str, number: object) -> None:
     note(session, {"sessionUpdate": "agent_thought_chunk", "content": {"type": "text", "text": "Planning."}})
     note(session, {"sessionUpdate": "plan", "entries": [{"content": "Write hello.txt", "status": "in_progress"}]})
     note(session, {"sessionUpdate": "tool_call", "toolCallId": "t1", "title": "Write hello.txt", "kind": "edit",
-                   "status": "pending", "locations": [{"path": path}]})
+                   "status": "pending", "locations": [{"path": path}], "rawInput": {"file_path": path}})
     answer = ask("session/request_permission", {"sessionId": session, "toolCall": {
         "toolCallId": "t1", "title": "Write hello.txt", "kind": "edit"}, "options": [
             {"optionId": "allow", "name": "Allow once", "kind": "allow_once"},

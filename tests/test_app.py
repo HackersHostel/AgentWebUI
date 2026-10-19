@@ -62,8 +62,12 @@ async def test_a_model_reply_streams_and_is_saved_with_the_history(settings_for,
     saved = await (await client.get(f"/api/chats/{chat['id']}")).json()
     assert saved["title"] == "Hi"
     assert [m["role"] for m in saved["messages"]] == ["user", "assistant", "user", "assistant"]
-    assert saved["messages"][1]["meta"]["usage"]["completion_tokens"] == 2
-    assert saved["messages"][1]["parts"] == [{"type": "thought", "text": "Hmm."}, {"type": "text", "text": "Hello there"}]
+    reply = saved["messages"][1]
+    assert reply["meta"]["usage"]["completion_tokens"] == 2
+    assert reply["meta"]["model"] == "local/small" and reply["meta"]["seconds"] >= 0
+    thought, text = reply["parts"]
+    assert thought["type"] == "thought" and thought["text"] == "Hmm." and thought["seconds"] >= 0
+    assert text == {"type": "text", "text": "Hello there"}
 
 
 async def test_a_provider_error_is_shown_and_saved(settings_for, client_for, fake_openai):
@@ -87,8 +91,11 @@ async def test_an_agent_asks_permission_writes_in_its_folder_and_answers(setting
         event = json.loads(line[6:])
         seen.append(event)
         if event["type"] == "permission":
-            assert [o["id"] for o in event["options"]] == ["allow", "reject"]
-            answer = await client.post(f"/api/chats/{chat['id']}/permissions/{event['id']}", json={"option": "allow"})
+            part = event["part"]
+            assert [o["id"] for o in part["options"]] == ["allow", "reject"]
+            assert part["state"] == "waiting" and part["input"].endswith("hello.txt")
+            assert (await (await client.get("/api/chats")).json())[0]["waiting"]
+            answer = await client.post(f"/api/chats/{chat['id']}/permissions/{part['id']}", json={"option": "allow"})
             assert answer.status == 204
     kinds = [e["type"] for e in seen]
     assert kinds[0] == "user" and kinds[-1] == "end"
@@ -98,8 +105,12 @@ async def test_an_agent_asks_permission_writes_in_its_folder_and_answers(setting
     reply = saved["messages"][-1]
     assert reply["content"] == "Done."
     tool = next(p for p in reply["parts"] if p["type"] == "tool")
-    assert tool["status"] == "completed" and tool["diffs"][0]["new"] == "hello\n"
+    assert tool["status"] == "completed" and tool["diffs"][0]["new"] == "hello\n" and tool["seconds"] >= 0
+    asked = next(p for p in reply["parts"] if p["type"] == "permission")
+    assert asked["state"] == "answered" and asked["answer_name"] == "Allow once"
     assert saved["session_id"] == "sess-1" and reply["meta"]["stop_reason"] == "end_turn"
+    assert reply["meta"]["agent"] == "Fake agent"
+    assert saved["agent"]["connected"] and saved["agent"]["modes"]["current"] == "ask"
 
 
 async def test_rejecting_the_permission_reaches_the_agent(settings_for, client_for, tmp_path):
@@ -108,7 +119,7 @@ async def test_rejecting_the_permission_reaches_the_agent(settings_for, client_f
     response = await client.post(f"/api/chats/{chat['id']}/messages", json={"text": "write hello"})
     async for line in response.content:
         if line.startswith(b"data: ") and (event := json.loads(line[6:]))["type"] == "permission":
-            await client.post(f"/api/chats/{chat['id']}/permissions/{event['id']}", json={"option": "reject"})
+            await client.post(f"/api/chats/{chat['id']}/permissions/{event['part']['id']}", json={"option": "reject"})
     assert not (tmp_path / "hello.txt").exists()
     saved = await (await client.get(f"/api/chats/{chat['id']}")).json()
     assert saved["messages"][-1]["content"] == "Rejected."
@@ -200,3 +211,73 @@ async def test_cross_site_and_non_json_writes_are_refused(settings_for, client_f
     assert (await client.post("/api/chats", data="target=agent:fake",
                               headers={"Content-Type": "text/plain"})).status == 415
     assert (await client.get("/api/chats", headers={"Host": "evil.test"})).status == 403
+
+
+async def test_search_finds_titles_and_message_text(settings_for, client_for, fake_openai):
+    client = await client_for(settings_for(fake_openai=fake_openai))
+    chat = await (await client.post("/api/chats", json={"target": "model:local/small"})).json()
+    await events(await client.post(f"/api/chats/{chat['id']}/messages", json={"text": "Plan the trip"}))
+    by_title = await (await client.get("/api/search", params={"q": "trip"})).json()
+    assert [c["id"] for c in by_title] == [chat["id"]] and by_title[0]["in_title"]
+    by_text = await (await client.get("/api/search", params={"q": "there"})).json()
+    assert by_text[0]["snippet"].startswith("Hello there")
+    assert await (await client.get("/api/search", params={"q": "100%"})).json() == []
+
+
+async def test_retry_replaces_the_last_reply(settings_for, client_for, fake_openai):
+    client = await client_for(settings_for(fake_openai=fake_openai))
+    chat = await (await client.post("/api/chats", json={"target": "model:local/small"})).json()
+    await events(await client.post(f"/api/chats/{chat['id']}/messages", json={"text": "Hi"}))
+    got = await events(await client.post(f"/api/chats/{chat['id']}/retry"))
+    assert [e["type"] for e in got][0] != "user"
+    saved = await (await client.get(f"/api/chats/{chat['id']}")).json()
+    assert [m["role"] for m in saved["messages"]] == ["user", "assistant"]
+    assert [m["content"] for m in fake_openai.seen[-1]["messages"]] == ["Hi"]
+
+
+async def test_a_model_chat_can_switch_models_but_an_agent_chat_cannot(settings_for, client_for, fake_openai):
+    client = await client_for(settings_for(fake_openai=fake_openai))
+    chat = await (await client.post("/api/chats", json={"target": "model:local/small"})).json()
+    moved = await client.patch(f"/api/chats/{chat['id']}", json={"target": "model:local/large"})
+    assert (await moved.json())["target"] == "local/large"
+    await events(await client.post(f"/api/chats/{chat['id']}/messages", json={"text": "Hi"}))
+    assert fake_openai.seen[-1]["model"] == "large"
+    agent = await (await client.post("/api/chats", json={"target": "agent:fake"})).json()
+    assert (await client.patch(f"/api/chats/{agent['id']}", json={"target": "model:local/small"})).status == 422
+
+
+async def test_an_agent_mode_can_be_changed(settings_for, client_for, monkeypatch):
+    monkeypatch.setenv("FAKE_MODE", "echo")
+    client = await client_for(settings_for())
+    chat = await (await client.post("/api/chats", json={"target": "agent:fake"})).json()
+    assert (await client.post(f"/api/chats/{chat['id']}/mode", json={"mode": "code"})).status == 409  # not started
+    got = await events(await client.post(f"/api/chats/{chat['id']}/messages", json={"text": "hi"}))
+    modes = next(e for e in got if e["type"] == "modes")["modes"]
+    assert [m["id"] for m in modes["available"]] == ["ask", "code"]
+    changed = await client.post(f"/api/chats/{chat['id']}/mode", json={"mode": "code"})
+    assert (await changed.json())["modes"]["current"] == "code"
+    assert (await client.post(f"/api/chats/{chat['id']}/mode", json={"mode": "nope"})).status == 409
+
+
+async def test_config_describes_providers_agents_and_the_user(tmp_path, client_for, fake_openai):
+    from .conftest import make_settings
+    client = await client_for(make_settings(tmp_path, fake_openai=fake_openai, user_name="Labib"))
+    body = await (await client.get("/api/config")).json()
+    assert body["user_name"] == "Labib"
+    assert body["providers"][0]["local"] and body["providers"][0]["models"] == 2
+    assert all(m["local"] for m in body["models"])
+    assert body["agents"][0]["running"] is False
+
+
+async def test_a_provider_with_listed_models_is_still_checked(tmp_path, client_for, fake_openai):
+    from agentwebui_lite.config import Provider
+    from .conftest import make_settings
+    settings = make_settings(tmp_path)
+    listed = Provider("listed", "Listed", str(fake_openai.make_url("/v1")).rstrip("/"), "", ("only-this",))
+    gone = Provider("gone", "Gone", "http://127.0.0.1:9/v1", "", ("x",))
+    client = await client_for(settings.__class__(**{**settings.__dict__, "providers": (listed, gone)}))
+    body = await (await client.get("/api/config")).json()
+    assert [m["id"] for m in body["models"]] == ["listed/only-this", "gone/x"]
+    summary = {p["id"]: p for p in body["providers"]}
+    assert summary["listed"]["error"] == "" and summary["listed"]["models"] == 1
+    assert "could not be reached" in summary["gone"]["error"]

@@ -42,7 +42,7 @@ agentwebui_lite/
   turns.py      one reply in progress: events for every viewer, parts, permission questions
   store.py      SQLite: chats and messages
   server.py     HTTP API, server-sent events, password guard
-  static/       the web page (placeholder until the design lands)
+  static/       the web client: Preact through htm, no build step (see DESIGN.md)
 ```
 
 ## API
@@ -51,19 +51,24 @@ agentwebui_lite/
 |---|---|
 | `GET /api/config` | models and agents from `.env` |
 | `GET/POST /api/chats` | list, create (`{"target": "model:<provider>/<model>"}` or `{"target": "agent:<id>", "cwd": "…"}`) |
-| `GET/PATCH/DELETE /api/chats/{id}` | messages, rename, delete |
+| `GET/PATCH/DELETE /api/chats/{id}` | messages and agent state; rename or move a model chat to another model; delete |
+| `GET /api/search?q=` | chats whose title or messages match, with a snippet |
 | `POST /api/chats/{id}/messages` | send; the response is the reply as server-sent events |
 | `GET /api/chats/{id}/events` | follow a reply that is still running |
 | `POST /api/chats/{id}/cancel` | stop the reply |
+| `POST /api/chats/{id}/retry` | answer the last message again, replacing the previous reply |
+| `POST /api/chats/{id}/mode` | switch an agent chat to one of the agent's modes (`{"mode": "<id>"}`) |
 | `POST /api/chats/{id}/permissions/{question}` | answer an agent's permission question (`{"option": "<id>"}`) |
 | `GET /api/session`, `POST /api/login`, `POST /api/logout` | only when `PASSWORD` is set |
 
-Events: `user`, `delta`, `thought`, `plan`, `tool`, `permission`, `permission_answered`, `notice`, `error`,
-`message` (the saved reply), `end`.
+Events: `user`, `delta`, `thought`, `plan`, `tool`, `permission`, `permission_answered`, `modes`, `notice`, `error`,
+`message` (the saved reply), `end`. A saved reply keeps its parts: text, thought (with seconds), plan, tool (input,
+output, diffs, seconds) and permission (the question and the answer).
 
 ## Next
 
-1. Build the designed client on this API.
-2. Agent modes and model choice (`session/set_mode`, the agent's model list), and the agent's slash commands.
+1. Wire the controls the design draws but Lite does not run yet, as they are wanted (see DESIGN.md).
+2. The agent's own model list and slash commands (modes are done).
 3. Attachments (images and files as ACP content blocks and as model message parts).
-4. A container image.
+4. Agent questions (the AgentAsk boards) once ACP has a question message.
+5. A container image.

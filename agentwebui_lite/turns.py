@@ -1,9 +1,14 @@
 """One reply in progress: its events (replayed to every viewer, so a reload picks the stream back up), the parts it
-is building, and the permission questions it is waiting on."""
+is building, and the permission questions it is waiting on.
+
+Parts are what the saved reply keeps and the page draws: text, thought (with how long it took), plan, tool (with
+its input, output, diffs and duration) and permission (the question and the answer)."""
 from __future__ import annotations
 
 import asyncio
+import json
 import secrets
+import time
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -18,9 +23,15 @@ class Turn:
         self.text = ""
         self.done = False
         self.cancelled = False
+        self.started = time.monotonic()
         self.task: asyncio.Task[None] | None = None
         self.questions: dict[str, asyncio.Future[str | None]] = {}
+        self._clock: dict[int, float] = {}  # id(part) -> when it started
         self._wake = asyncio.Event()
+
+    @property
+    def seconds(self) -> float:
+        return round(time.monotonic() - self.started, 2)
 
     def emit(self, event: str, /, **data: Any) -> None:
         self.events.append({"type": event, **data})
@@ -28,6 +39,7 @@ class Turn:
         wake.set()
 
     def finish(self) -> None:
+        self._close_thought()
         self.done = True
         self.emit("end")
 
@@ -42,13 +54,25 @@ class Turn:
                 return
             await wake.wait()
 
+    def _add(self, part: dict[str, Any]) -> dict[str, Any]:
+        if part.get("type") != "thought":
+            self._close_thought()
+        self.parts.append(part)
+        self._clock[id(part)] = time.monotonic()
+        return part
+
+    def _close_thought(self) -> None:
+        last = self.parts[-1] if self.parts else None
+        if last and last.get("type") == "thought" and "seconds" not in last:
+            last["seconds"] = round(time.monotonic() - self._clock.get(id(last), self.started), 1)
+
     def add_text(self, kind: str, text: str) -> None:
         if kind == "text":
             self.text += text
         if self.parts and self.parts[-1].get("type") == kind:
             self.parts[-1]["text"] += text
         else:
-            self.parts.append({"type": kind, "text": text})
+            self._add({"type": kind, "text": text})
         self.emit("delta" if kind == "text" else "thought", text=text)
 
     def apply(self, update: dict[str, Any]) -> None:
@@ -61,52 +85,71 @@ class Turn:
         elif kind == "plan":
             items = [{"text": str(entry.get("content") or ""), "status": str(entry.get("status") or "pending")}
                      for entry in update.get("entries") or [] if isinstance(entry, dict)]
-            part = {"type": "plan", "items": items}
-            self.parts = [p for p in self.parts if p.get("type") != "plan"] + [part]
+            part = next((p for p in self.parts if p.get("type") == "plan"), None)
+            if part is None:
+                part = self._add({"type": "plan", "id": "plan", "items": items})
+            part["items"] = items
             self.emit("plan", part=part)
         elif kind in ("tool_call", "tool_call_update"):
-            call_id = str(update.get("toolCallId") or "")
-            part = next((p for p in self.parts if p.get("type") == "tool" and p["id"] == call_id), None)
-            if part is None:
-                part = {"type": "tool", "id": call_id, "title": "", "kind": "", "status": "pending",
-                        "locations": [], "output": "", "diffs": []}
-                self.parts.append(part)
-            for field in ("title", "kind", "status"):
-                if isinstance(update.get(field), str) and update[field]:
-                    part[field] = update[field]
-            if isinstance(update.get("locations"), list):
-                part["locations"] = [str(loc.get("path")) for loc in update["locations"]
-                                     if isinstance(loc, dict) and loc.get("path")]
-            if isinstance(update.get("content"), list):
-                texts, diffs = [], []
-                for item in update["content"]:
-                    if not isinstance(item, dict):
-                        continue
-                    if item.get("type") == "diff":
-                        diffs.append({"path": str(item.get("path") or ""), "old": item.get("oldText") or "",
-                                      "new": str(item.get("newText") or "")})
-                    elif item.get("type") == "content":
-                        texts.append(_text_of(item.get("content")))
-                part["output"] = "\n".join(t for t in texts if t)
-                part["diffs"] = diffs
-            self.emit("tool", part=part)
+            self._tool(update)
+
+    def _tool(self, update: dict[str, Any]) -> None:
+        call_id = str(update.get("toolCallId") or "")
+        part = next((p for p in self.parts if p.get("type") == "tool" and p["id"] == call_id), None)
+        if part is None:
+            part = self._add({"type": "tool", "id": call_id, "title": "", "kind": "", "status": "pending",
+                              "input": "", "locations": [], "output": "", "diffs": []})
+        for field in ("title", "kind", "status"):
+            if isinstance(update.get(field), str) and update[field]:
+                part[field] = update[field]
+        if "rawInput" in update:
+            part["input"] = summarize(update["rawInput"])
+        if isinstance(update.get("locations"), list):
+            part["locations"] = [str(loc.get("path")) for loc in update["locations"]
+                                 if isinstance(loc, dict) and loc.get("path")]
+        if isinstance(update.get("content"), list):
+            texts, diffs = [], []
+            for item in update["content"]:
+                if not isinstance(item, dict):
+                    continue
+                if item.get("type") == "diff":
+                    diffs.append({"path": str(item.get("path") or ""), "old": item.get("oldText") or "",
+                                  "new": str(item.get("newText") or "")})
+                elif item.get("type") == "content":
+                    texts.append(_text_of(item.get("content")))
+            part["output"] = "\n".join(t for t in texts if t)
+            part["diffs"] = diffs
+        elif isinstance(update.get("rawOutput"), (str, dict, list)) and not part["output"]:
+            part["output"] = summarize(update["rawOutput"], 4000)
+        if part["status"] in ("completed", "failed") and "seconds" not in part:
+            part["seconds"] = round(time.monotonic() - self._clock.get(id(part), self.started), 1)
+        self.emit("tool", part=part)
 
     async def ask(self, tool_call: dict[str, Any], options: list[dict[str, Any]]) -> str | None:
         """Put a permission question to whoever is watching. The chosen option id, or None when nobody answers."""
         question_id = secrets.token_hex(6)
         future: asyncio.Future[str | None] = asyncio.get_running_loop().create_future()
         self.questions[question_id] = future
-        self.emit("permission", id=question_id, title=str(tool_call.get("title") or "The agent wants to act"),
-                  kind=str(tool_call.get("kind") or ""),
-                  options=[{"id": str(o.get("optionId")), "name": str(o.get("name") or o.get("optionId")),
-                            "kind": str(o.get("kind") or "")} for o in options if isinstance(o, dict)])
+        tool = next((p for p in self.parts if p.get("type") == "tool" and p["id"] == tool_call.get("toolCallId")), {})
+        part = self._add({
+            "type": "permission", "id": question_id, "state": "waiting",
+            "title": str(tool_call.get("title") or tool.get("title") or "The agent wants to act"),
+            "kind": str(tool_call.get("kind") or tool.get("kind") or ""),
+            "input": summarize(tool_call["rawInput"]) if "rawInput" in tool_call else tool.get("input", ""),
+            "options": [{"id": str(o.get("optionId")), "name": str(o.get("name") or o.get("optionId")),
+                         "kind": str(o.get("kind") or "")} for o in options if isinstance(o, dict)],
+            "answer": None, "expires_in": PERMISSION_TIMEOUT})
+        self.emit("permission", part=part)
         try:
             answer = await asyncio.wait_for(future, PERMISSION_TIMEOUT)
         except TimeoutError:
             answer = None
         finally:
             self.questions.pop(question_id, None)
-        self.emit("permission_answered", id=question_id, option=answer)
+        chosen = next((o for o in part["options"] if o["id"] == answer), None)
+        part.update(answer=answer, answer_name=chosen["name"] if chosen else "", answer_kind=chosen["kind"] if chosen else "",
+                    state="answered" if chosen else ("cancelled" if self.cancelled else "expired"))
+        self.emit("permission_answered", part=part)
         return answer
 
     def answer(self, question_id: str, option: str | None) -> bool:
@@ -120,6 +163,26 @@ class Turn:
         for future in list(self.questions.values()):
             if not future.done():
                 future.set_result(None)
+
+    @property
+    def waiting(self) -> bool:
+        return bool(self.questions)
+
+
+def summarize(value: Any, limit: int = 600) -> str:
+    """A short, readable form of a tool's raw input or output: the command, the path, or compact JSON."""
+    if isinstance(value, str):
+        return value[:limit]
+    if isinstance(value, dict):
+        for key in ("command", "cmd", "file_path", "path", "url", "query", "pattern"):
+            if isinstance(value.get(key), str):
+                return value[key][:limit]
+            if isinstance(value.get(key), list) and all(isinstance(v, str) for v in value[key]):
+                return " ".join(value[key])[:limit]
+    try:
+        return json.dumps(value, ensure_ascii=False)[:limit]
+    except (TypeError, ValueError):
+        return str(value)[:limit]
 
 
 def _text_of(content: Any) -> str:

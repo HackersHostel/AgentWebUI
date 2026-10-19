@@ -1,0 +1,84 @@
+/* Design tokens from the AgentWebUI redesign (Foundations board). Screens use these names, never raw hex.
+   The root element carries `app` plus one theme class (light, graphite, terminal, paper, hc) and an accent class. */
+
+@font-face {
+  font-family: 'Geist';
+  src: url('../fonts/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('../fonts/GeistMono-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+.app {
+  --bg: #111114; --bg-side: #0c0c0f; --bg-raised: #18181c; --bg-elev: #1d1d22; --bg-input: #16161a;
+  --bg-hover: rgba(255,255,255,.045); --bg-active: rgba(255,255,255,.08); --bg-press: rgba(255,255,255,.12);
+  --line: rgba(255,255,255,.07); --line-2: rgba(255,255,255,.12);
+  --tx: #ededf0; --tx-2: #b4b4bc; --tx-3: #8b8b95; --tx-off: #5f5f68;
+  --ac: #6e56cf; --ac-hover: #7c66dc; --ac-press: #5e48b8; --ac-tx: #b3a4ff; --ac-soft: rgba(124,102,220,.16);
+  --ac-line: rgba(124,102,220,.45); --on-ac: #fff;
+  --ok: #3dd68c; --ok-soft: rgba(61,214,140,.12);
+  --warn: #f5b94a; --warn-soft: rgba(245,185,74,.12);
+  --bad: #ff7a7f; --bad-fill: #c4323a; --bad-press: #a8282f; --bad-soft: rgba(255,99,105,.12);
+  --info: #8cc8ff; --info-soft: rgba(140,200,255,.1);
+  --agent-own: #6e56cf; --agent-self: #0e8f7e; --agent-unknown: #b4541a;
+  --mark: rgba(245,185,74,.28);
+  --code: #0b0b0d; --syn-k: #c8b6ff; --syn-s: #9ee6b8; --syn-f: #8cc8ff; --syn-t: #ffb38a;
+  --scrim: rgba(0,0,0,.55);
+  --lift: 0 12px 32px -16px rgba(0,0,0,.7);
+  --shadow: 0 18px 50px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.06);
+  --font: 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+  --size: 14px;
+  color-scheme: dark;
+}
+.app.light {
+  --bg: #ffffff; --bg-side: #f7f7f8; --bg-raised: #ffffff; --bg-elev: #ffffff; --bg-input: #ffffff;
+  --bg-hover: rgba(0,0,0,.04); --bg-active: rgba(0,0,0,.065); --bg-press: rgba(0,0,0,.1);
+  --line: rgba(0,0,0,.08); --line-2: rgba(0,0,0,.14);
+  --tx: #18181b; --tx-2: #3f3f46; --tx-3: #6b6b74; --tx-off: #a1a1aa;
+  --ac-tx: #5b45c9; --ac-soft: rgba(110,86,207,.1); --ac-line: rgba(110,86,207,.4);
+  --ok: #18794e; --ok-soft: rgba(24,121,78,.1);
+  --warn: #8a5a00; --warn-soft: rgba(245,185,74,.16);
+  --bad: #ce2c31; --bad-fill: #ce2c31; --bad-soft: rgba(206,44,49,.08);
+  --info: #0b62b8; --info-soft: rgba(11,98,184,.08);
+  --agent-self: #0b7366; --agent-unknown: #9a4512;
+  --mark: rgba(245,185,74,.4);
+  --code: #f7f7f8; --syn-k: #6b3fd1; --syn-s: #18794e; --syn-f: #0b62b8; --syn-t: #b5470f;
+  --scrim: rgba(24,24,27,.3);
+  --lift: 0 12px 32px -18px rgba(0,0,0,.25);
+  --shadow: 0 18px 50px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.06);
+  color-scheme: light;
+}
+.app.graphite {
+  --bg: #121417; --bg-side: #0d0f11; --bg-raised: #1a1d21; --tx: #eef1f4; --tx-2: #b8bfc9; --tx-3: #8f98a5;
+  --ac: #2563d0; --ac-hover: #2f6fe0; --ac-tx: #7fb2ff; --ac-soft: rgba(76,141,255,.16);
+}
+.app.terminal {
+  --bg: #0a0f0b; --bg-side: #070b08; --bg-raised: #111914; --line: rgba(120,255,170,.08); --line-2: rgba(120,255,170,.14);
+  --tx: #d9ffe6; --tx-2: #9fd8b2; --tx-3: #79b08d;
+  --ac: #1f8a47; --ac-hover: #23a052; --ac-tx: #5cf29a; --ac-soft: rgba(34,197,94,.16);
+}
+.app.paper {
+  --bg: #f8f4ec; --bg-side: #f1ebdf; --bg-raised: #fffdf8; --bg-elev: #fffdf8; --bg-input: #fffdf8;
+  --bg-hover: rgba(60,40,10,.05); --bg-active: rgba(60,40,10,.08);
+  --line: rgba(60,40,10,.1); --line-2: rgba(60,40,10,.16);
+  --tx: #2b241b; --tx-2: #554a3b; --tx-3: #6f6250;
+  --ac: #0f766e; --ac-hover: #0b5f58; --ac-tx: #0f6d66; --ac-soft: rgba(15,118,110,.12); --ok: #2b7330;
+  color-scheme: light;
+}
+.app.hc {
+  --bg: #000; --bg-side: #000; --bg-raised: #0a0a0a; --bg-elev: #0a0a0a;
+  --bg-hover: rgba(255,255,255,.12); --bg-active: rgba(255,255,255,.18);
+  --line: #5c5c5c; --line-2: #9a9a9a; --tx: #fff; --tx-2: #f0f0f0; --tx-3: #d4d4d4;
+  --ac: #ffd60a; --ac-hover: #ffe14d; --ac-tx: #ffd60a; --ac-soft: rgba(255,214,10,.2); --on-ac: #000;
+}
+/* Accent choices on the default themes (Main board's accent lever). */
+.app.ac-blue { --ac: #2b62d9; --ac-hover: #3a70e3; --ac-tx: #8db4ff; --ac-soft: rgba(43,98,217,.16); }
+.app.light.ac-blue { --ac-tx: #1f55c4; --ac-soft: rgba(43,98,217,.1); }
+.app.ac-teal { --ac: #0f766e; --ac-hover: #13857c; --ac-tx: #5fd4c4; --ac-soft: rgba(15,118,110,.18); }
+.app.light.ac-teal { --ac-tx: #0d6b63; --ac-soft: rgba(15,118,110,.1); }

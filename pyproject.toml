@@ -19,7 +19,7 @@ agentwebui-lite = "agentwebui_lite.__main__:main"
 include = ["agentwebui_lite*"]
 
 [tool.setuptools.package-data]
-agentwebui_lite = ["static/*"]
+agentwebui_lite = ["static/*", "static/*/*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -8,8 +8,9 @@ and no accounts. Everything is configured in `.env`.
   Code, Codex, Hermes, Pi, Gemini CLI, OpenCode, … The agent streams its thinking, plan, tool calls and diffs, and asks
   you before it acts.
 
-The server is about 1,200 lines of Python with one dependency (`aiohttp`). It uses about 33 MB of memory and about
-5 MB of installed packages.
+The server is about 1,400 lines of Python with one dependency (`aiohttp`), and uses about 32 MB of memory. The web
+client is Preact through htm with no build step: about 2,600 lines of JavaScript and 660 of CSS, 424 KB on disk with
+its fonts. Nothing loads from the internet unless you pick a font other than Geist.
 
 ## Run
 
@@ -49,7 +50,20 @@ AGENT_HERMES_COMMAND=hermes acp
 No accounts, roles or sign-up, no RAG or memory, no prompt library, no workflows, no MCP management, no sandbox, no
 built-in agent builder. Agents bring their own tools, memory and MCP servers. See [`docs/PLAN.md`](docs/PLAN.md).
 
-## Status
+## The client
 
-The page in `agentwebui_lite/static/` is a plain placeholder. The designed client replaces it and talks to the same
-API.
+Built from the AgentWebUI redesign: [`docs/DESIGN.md`](docs/DESIGN.md) maps every board to what is built, what is
+drawn but not running in Lite, and where Lite departs from the boards.
+
+| | |
+|---|---|
+| `⌘N` / `Ctrl+N` | New chat |
+| `⌘K` | Search chats, actions and settings |
+| `⌘M` | Switch model |
+| `⌘\` | Collapse or expand the sidebar |
+| `↵` | Send, or allow the waiting request |
+| `Esc` | Stop the reply, or close the top layer |
+| `?` | All shortcuts |
+
+Appearance (theme, accent, fonts, text size, density) is kept in the browser. Browser notifications, once allowed
+from the bell, tell you when an agent waits for you or a reply finishes in the background.

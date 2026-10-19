@@ -15,6 +15,7 @@ from typing import Any
 import aiohttp
 from aiohttp import web
 
+from . import __version__
 from .acp import AgentError, Agents
 from .config import Settings, is_loopback
 from .providers import ProviderError, Providers
@@ -53,9 +54,12 @@ def create_app(settings: Settings) -> web.Application:
         web.get("/api/chats", list_chats),
         web.post("/api/chats", create_chat),
         web.get("/api/chats/{id}", get_chat),
-        web.patch("/api/chats/{id}", rename_chat),
+        web.patch("/api/chats/{id}", update_chat),
         web.delete("/api/chats/{id}", delete_chat),
+        web.get("/api/search", search),
         web.post("/api/chats/{id}/messages", send_message),
+        web.post("/api/chats/{id}/retry", retry_reply),
+        web.post("/api/chats/{id}/mode", set_mode),
         web.get("/api/chats/{id}/events", follow_chat),
         web.post("/api/chats/{id}/cancel", cancel_chat),
         web.post("/api/chats/{id}/permissions/{question}", answer_permission),
@@ -163,16 +167,34 @@ async def logout(request: web.Request) -> web.Response:
 
 async def config(request: web.Request) -> web.Response:
     settings = request.app[SETTINGS]
+    agents = request.app[AGENTS]
+    if request.query.get("refresh"):
+        request.app[PROVIDERS].forget()
     return web.json_response({
         "models": await request.app[PROVIDERS].models(),
-        "agents": [{"id": a.id, "name": a.name, "cwd": a.cwd} for a in settings.agents],
+        "providers": await request.app[PROVIDERS].summary(),
+        "agents": [{"id": a.id, "name": a.name, "cwd": a.cwd, "command": " ".join(a.command),
+                    "running": agents.get(a.id).running} for a in settings.agents],
         "workspace": settings.workspace,
+        "user_name": settings.user_name,
+        "password": bool(settings.password),
+        "system_prompt": bool(settings.system_prompt),
+        "version": __version__,
     })
 
 
+def _live(app: web.Application, chat: dict[str, Any]) -> dict[str, Any]:
+    turn = app[TURNS].get(chat["id"])
+    return {**chat, "running": turn is not None, "waiting": bool(turn and turn.waiting)}
+
+
 async def list_chats(request: web.Request) -> web.Response:
-    turns = request.app[TURNS]
-    return web.json_response([{**chat, "running": chat["id"] in turns} for chat in request.app[STORE].list_chats()])
+    return web.json_response([_live(request.app, chat) for chat in request.app[STORE].list_chats()])
+
+
+async def search(request: web.Request) -> web.Response:
+    query = request.query.get("q", "")[:200]
+    return web.json_response([_live(request.app, chat) for chat in request.app[STORE].search(query)])
 
 
 async def create_chat(request: web.Request) -> web.Response:
@@ -200,15 +222,32 @@ async def create_chat(request: web.Request) -> web.Response:
 
 async def get_chat(request: web.Request) -> web.Response:
     chat = _chat_or_404(request)
-    turn = request.app[TURNS].get(chat["id"])
-    return web.json_response({**chat, "running": turn is not None, "messages": request.app[STORE].messages(chat["id"])})
+    body = {**_live(request.app, chat), "messages": request.app[STORE].messages(chat["id"])}
+    if chat["kind"] == "agent":
+        process = request.app[AGENTS].get(chat["target"])
+        body["agent"] = process.state(chat["session_id"]) if process else None
+    return web.json_response(body)
 
 
-async def rename_chat(request: web.Request) -> web.Response:
+async def update_chat(request: web.Request) -> web.Response:
+    """Rename a chat, or move a model chat to another model (its history is plain messages, so any model reads it)."""
     chat = _chat_or_404(request)
-    title = str((await _body(request)).get("title") or "").strip()[:200]
-    request.app[STORE].update_chat(chat["id"], title=title)
-    return web.json_response(request.app[STORE].get_chat(chat["id"]))
+    body = await _body(request)
+    fields: dict[str, Any] = {}
+    if "title" in body:
+        fields["title"] = str(body.get("title") or "").strip()[:200]
+    if "target" in body:
+        kind, _, target = str(body["target"]).partition(":")
+        provider_id, _, model = target.partition("/")
+        if chat["kind"] != "model" or kind != "model":
+            return _error(422, "only a model chat can switch to another model")
+        if request.app[SETTINGS].provider(provider_id) is None or not model:
+            return _error(422, f"unknown model {target!r}")
+        if chat["id"] in request.app[TURNS]:
+            return _error(409, "a reply is still running in this chat")
+        fields["target"] = target
+    request.app[STORE].update_chat(chat["id"], **fields)
+    return web.json_response(_live(request.app, request.app[STORE].get_chat(chat["id"])))
 
 
 async def delete_chat(request: web.Request) -> web.Response:
@@ -231,11 +270,41 @@ async def send_message(request: web.Request) -> web.StreamResponse:
     user = store.add_message(chat["id"], "user", text)
     if not chat["title"]:
         store.update_chat(chat["id"], title=text.splitlines()[0][:60])
+    return await _stream(request, _start(request.app, chat, text, user))
+
+
+async def retry_reply(request: web.Request) -> web.StreamResponse:
+    """Answer the last message again: the previous reply is replaced."""
+    chat = _chat_or_404(request)
+    if chat["id"] in request.app[TURNS]:
+        return _error(409, "a reply is still running in this chat")
+    store = request.app[STORE]
+    store.delete_last_reply(chat["id"])
+    last = next((m for m in reversed(store.messages(chat["id"])) if m["role"] == "user"), None)
+    if last is None:
+        return _error(422, "there is no message to answer")
+    return await _stream(request, _start(request.app, chat, last["content"], None))
+
+
+def _start(app: web.Application, chat: dict[str, Any], text: str, user: dict[str, Any] | None) -> Turn:
     turn = Turn(chat["id"])
-    turn.emit("user", message=user)
-    turns[chat["id"]] = turn
-    turn.task = asyncio.create_task(_run(request.app, chat, text, turn))
-    return await _stream(request, turn)
+    if user:
+        turn.emit("user", message=user)
+    app[TURNS][chat["id"]] = turn
+    turn.task = asyncio.create_task(_run(app, chat, text, turn))
+    return turn
+
+
+async def set_mode(request: web.Request) -> web.Response:
+    chat = _chat_or_404(request)
+    process = request.app[AGENTS].get(chat["target"]) if chat["kind"] == "agent" else None
+    if process is None:
+        return _error(422, "only an agent chat has modes")
+    try:
+        modes = await process.set_mode(chat["session_id"], str((await _body(request)).get("mode") or ""))
+    except AgentError as exc:
+        return _error(409, str(exc))
+    return web.json_response({"modes": modes})
 
 
 async def follow_chat(request: web.Request) -> web.StreamResponse:
@@ -287,8 +356,10 @@ async def answer_permission(request: web.Request) -> web.Response:
 
 async def _run(app: web.Application, chat: dict[str, Any], text: str, turn: Turn) -> None:
     store, meta = app[STORE], {}
+    chat = store.get_chat(chat["id"]) or chat  # the model may have changed since the request was read
     try:
         if chat["kind"] == "model":
+            meta["model"] = chat["target"]
             history = [{"role": m["role"], "content": m["content"]} for m in store.messages(chat["id"])
                        if m["content"]]
             if app[SETTINGS].system_prompt:
@@ -307,6 +378,9 @@ async def _run(app: web.Application, chat: dict[str, Any], text: str, turn: Turn
                 store.update_chat(chat["id"], session_id=session_id)
             if lost:
                 turn.emit("notice", text=f"{process.spec.name} restarted and does not remember the earlier messages.")
+            if session.modes:
+                turn.emit("modes", modes=session.modes)
+            meta["agent"] = process.spec.name
             result = await process.prompt(session_id, session, turn, text)
             meta["stop_reason"] = result.get("stopReason")
             if isinstance(result.get("usage"), dict):
@@ -323,6 +397,7 @@ async def _run(app: web.Application, chat: dict[str, Any], text: str, turn: Turn
     finally:
         if turn.cancelled:
             meta["stop_reason"] = "cancelled"
+        meta["seconds"] = turn.seconds
         message = store.add_message(chat["id"], "assistant", turn.text, turn.parts, meta)
         app[TURNS].pop(chat["id"], None)
         turn.emit("message", message=message)

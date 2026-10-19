@@ -45,6 +45,7 @@ class Settings:
     port: int = 3000
     data_dir: Path = Path("data")
     password: str = ""
+    user_name: str = ""
     system_prompt: str = ""
     workspace: str = ""
     agent_idle_minutes: float = 10
@@ -114,7 +115,8 @@ def load(env_file: Path | None = None, environ: dict[str, str] | None = None) ->
         raise ConfigError(f"not a number: {exc}") from None
     settings = Settings(
         host=env.get("HOST", "127.0.0.1"), port=port, data_dir=Path(env.get("DATA_DIR", "data")),
-        password=env.get("PASSWORD", ""), system_prompt=env.get("SYSTEM_PROMPT", ""),
+        password=env.get("PASSWORD", ""), user_name=env.get("USER_NAME", "").strip()[:60],
+        system_prompt=env.get("SYSTEM_PROMPT", ""),
         workspace=os.path.expanduser(workspace), agent_idle_minutes=idle,
         providers=tuple(providers), agents=tuple(agents))
     if not settings.password and not is_loopback(settings.host):
