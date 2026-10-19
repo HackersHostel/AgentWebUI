@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentwebui-light"
+version = "0.1.0"
+description = "A light web interface for AI models and command-line agents."
+requires-python = ">=3.11"
+dependencies = ["aiohttp>=3.9,<4"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-aiohttp>=1.0"]
+
+[project.scripts]
+agentwebui-light = "agentwebui_light.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["agentwebui_light*"]
+
+[tool.setuptools.package-data]
+agentwebui_light = ["static/*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

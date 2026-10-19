@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentWebUI Light</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<div id="signin" class="signin" hidden>
+  <form id="signin-form">
+    <h1>AgentWebUI Light</h1>
+    <input id="password" type="password" placeholder="Password" autocomplete="current-password" required>
+    <button type="submit">Sign in</button>
+    <p id="signin-error" class="error" role="alert"></p>
+  </form>
+</div>
+<div id="app" class="app" hidden>
+  <aside class="sidebar">
+    <button id="new-chat" class="primary">New chat</button>
+    <ul id="chats" class="chats"></ul>
+  </aside>
+  <main class="main">
+    <header class="bar">
+      <button id="toggle" class="ghost" aria-label="Chats">☰</button>
+      <select id="target" aria-label="Model or agent"></select>
+      <input id="cwd" placeholder="Folder" aria-label="Agent folder" hidden>
+      <span id="chat-title" class="title"></span>
+    </header>
+    <section id="messages" class="messages" aria-live="polite"></section>
+    <form id="composer" class="composer">
+      <textarea id="input" rows="1" placeholder="Message" aria-label="Message"></textarea>
+      <button id="send" type="submit" class="primary">Send</button>
+      <button id="stop" type="button" hidden>Stop</button>
+    </form>
+  </main>
+</div>
+<script src="/assets/app.js"></script>
+</body>
+</html>
