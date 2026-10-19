@@ -120,6 +120,9 @@ FILES_ROOTS=~/code,~/notes         # what Files shows and where agents may work
 - An agent process stays up while you use it and stops after `AGENT_IDLE_MINUTES` (10) with nothing to do. Agents
   are much larger than this server (Claude Code about 370 MB, Codex about 580 MB), so this matters on a small machine.
 - Without `PASSWORD` the server only answers on localhost. Set `PASSWORD` to listen on another address.
+- To show the page inside another site, such as your own dashboard: list that site in `FRAME_ANCESTORS`, set
+  `EMBED_SECRET`, and have the site open the frame at a one-time `/embed?token=…` link it signs (the format is in
+  `.env.example`). `LOCK_MODEL` and `LOCK_FOLDER` hide the model and folder choices when the site decides them.
 - Models and agents come only from `.env`; the browser switches between them, hides models you don't use, and
   remembers your defaults (Settings › Chat has "Reset to defaults").
 

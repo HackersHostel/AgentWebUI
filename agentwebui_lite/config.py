@@ -63,6 +63,10 @@ class Settings:
     brand_greeting: str = ""
     brand_accent: str = ""
     brand_theme: str = ""
+    embed_secret: str = ""  # signs the one-time links that let a page that frames this one sign the browser in
+    frame_ancestors: tuple[str, ...] = ()  # pages that may show this one in a frame; else only this server
+    lock_model: bool = False  # the agent's model is set in .env, not in the page
+    lock_folder: bool = False  # agent chats always work in the agent's folder
 
     def provider(self, provider_id: str) -> Provider | None:
         return next((p for p in self.providers if p.id == provider_id), None)
@@ -153,9 +157,19 @@ def load(env_file: Path | None = None, environ: dict[str, str] | None = None) ->
         rich_replies=_yes(env.get("RICH_REPLIES", "true")), upload_mb=max(upload_mb, 1),
         brand_name=env.get("BRAND_NAME", "").strip()[:40] or "AgentWebUI", brand_logo=env.get("BRAND_LOGO", "").strip(),
         brand_greeting=env.get("BRAND_GREETING", "").strip()[:120], brand_accent=env.get("BRAND_ACCENT", "").strip(),
-        brand_theme=env.get("BRAND_THEME", "").strip())
+        brand_theme=env.get("BRAND_THEME", "").strip(),
+        embed_secret=env.get("EMBED_SECRET", "").strip(),
+        frame_ancestors=tuple(env.get("FRAME_ANCESTORS", "").split()),
+        lock_model=_yes(env.get("LOCK_MODEL", "")), lock_folder=_yes(env.get("LOCK_FOLDER", "")))
     if not settings.password and not is_loopback(settings.host):
         raise ConfigError(f"HOST={settings.host} is reachable from other machines: set PASSWORD in .env")
+    if settings.embed_secret and not settings.password:
+        raise ConfigError("EMBED_SECRET signs browsers in, so it needs PASSWORD too")
+    if settings.embed_secret and len(settings.embed_secret) < 32:
+        raise ConfigError("EMBED_SECRET is too short: use at least 32 characters")
+    bad = [a for a in settings.frame_ancestors if not a.startswith(("https://", "http://"))]
+    if bad:
+        raise ConfigError(f"FRAME_ANCESTORS takes full origins like https://app.example.com, not {bad[0]!r}")
     return settings
 
 
