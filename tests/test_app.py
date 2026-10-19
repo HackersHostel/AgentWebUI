@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import sys
 
 import pytest
@@ -743,6 +744,29 @@ async def test_the_brand_names_the_page_and_the_installable_app(settings_for, cl
     assert manifest["name"] == "Hostel AI" and manifest["icons"][0]["src"] == "/brand/logo"
     assert (await client.get("/brand/logo")).status == 200
     assert (await (await client.get("/api/config")).json())["brand"]["name"] == "Hostel AI"
+
+
+async def test_the_browser_checks_client_files_after_an_update(settings_for, client_for):
+    client = await client_for(settings_for())
+    response = await client.get("/assets/js/main.js")
+    assert response.status == 200 and response.headers["Cache-Control"] == "no-cache"
+
+
+async def test_the_page_loads_the_client_from_an_address_that_changes_with_it(settings_for, client_for):
+    client = await client_for(settings_for())
+    page = await (await client.get("/")).text()
+    script = re.search(r'<script type="module" src="(/assets/[0-9a-f]{12}/js/main\.js)"', page)
+    assert script and (await client.get(script.group(1))).status == 200
+    assert '"/assets/css/' not in page
+
+
+async def test_every_logo_the_client_names_is_served(settings_for, client_for):
+    from agentwebui_lite.server import STATIC
+    client = await client_for(settings_for())
+    names = re.findall(r"'([\w-]+\.(?:svg|png))'", (STATIC / "js" / "logos.js").read_text())
+    assert len(names) >= 19
+    for name in names:
+        assert (await client.get(f"/assets/logos/{name}")).status == 200, name
 
 
 async def test_a_webhook_hears_when_a_reply_finishes(settings_for, client_for, fake_openai, aiohttp_server):

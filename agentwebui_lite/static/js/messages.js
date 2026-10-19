@@ -2,6 +2,7 @@
 import { html, useState, useMemo, useEffect, useRef, store, useStore, cx, copyText, secs, basename, providerGradient, AGENT_GRADIENT,
   size, isImage, fileUrl, rawUrl, saveFile, navigate, api, toast } from './lib.js';
 import { Icon } from './icons.js';
+import { Logo, targetLogo, agentLogo } from './logos.js';
 import { Menu, MenuItem, MenuSep, useToggle } from './ui.js';
 import { parse, highlight } from './markdown.js';
 import { Choices } from './choices.js';
@@ -80,13 +81,15 @@ export function NoteLine({ text }) {
 export function Avatar({ chat }) {
   if (chat.kind === 'agent') return null;
   const info = describeTarget(`model:${chat.target}`);
+  const mark = targetLogo(`model:${chat.target}`, store.get().config);
+  if (mark) return html`<span class="avatar-ai" style="background: none"><${Logo} name=${mark} tile size=${28} radius=${8} /></span>`;
   return html`<span class="avatar-ai" style=${`background: ${providerGradient(info?.model?.provider || chat.target.split('/')[0], info?.model?.local)}`}>
     <${Icon} name="sparkle" size=${15} style="stroke-width: 2" /></span>`;
 }
 
 function AgentHead({ chat }) {
   const info = describeTarget(`agent:${chat.target}`);
-  return html`<div class="agent-head"><span class="ico" style=${`width: 24px; height: 24px; border-radius: 7px; background: ${AGENT_GRADIENT}; color: #fff`}><${Icon} name="agent" size=${14} /></span>
+  return html`<div class="agent-head"><${Logo} name=${agentLogo(info?.agent)} tile size=${24} radius=${7} fallback=${AGENT_GRADIENT} icon="agent" iconSize=${14} />
     <span style="font-weight: 500">${info?.name || chat.target}</span>
     <span style="color: var(--tx-3)">external agent · in ${basename(chat.cwd)}</span></div>`;
 }
