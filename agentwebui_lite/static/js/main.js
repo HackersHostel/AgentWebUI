@@ -29,7 +29,7 @@ function Overlay() {
     case 'shortcuts': return html`<${Shortcuts} onClose=${close} />`;
     case 'confirm': return html`<${Confirm} ...${overlay} onClose=${close} />`;
     case 'rename': return html`<${Rename} ...${overlay} onClose=${close} />`;
-    case 'files': return html`<${FilePicker} ...${overlay} onClose=${close} />`;
+    case 'files': return html`<${FilePicker} ...${overlay} onClose=${() => store.set({ overlay: overlay.back || null })} />`;
     case 'save': return html`<${FilePicker} mode="save" start=${overlay.folder} name=${overlay.name} content=${overlay.content} onClose=${close} />`;
     case 'project': return html`<${ProjectDialog} project=${overlay.project} moveChat=${overlay.moveChat} onClose=${close} />`;
     case 'move': return html`<${MoveDialog} chat=${overlay.chat} onClose=${close} />`;

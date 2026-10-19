@@ -145,6 +145,14 @@ export function secs(value) {
   return value < 10 ? `${value.toFixed(1)} s` : value < 60 ? `${Math.round(value)} s` : `${Math.floor(value / 60)}m ${Math.round(value % 60)}s`;
 }
 
+// Whether `path` is `root` or inside it. Works with a root of "/" and with Windows separators.
+export function within(path, root) {
+  const norm = (p) => String(p || '').replace(/\\/g, '/').replace(/(.)\/+$/, '$1');
+  const p = norm(path), r = norm(root);
+  if (!p || !r) return false;
+  return p === r || p.startsWith(r.endsWith('/') ? r : `${r}/`);
+}
+
 export function dirname(path) {
   const s = String(path || '');
   const i = s.lastIndexOf('/');

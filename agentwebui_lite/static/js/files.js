@@ -1,7 +1,7 @@
 // Files and Git (Workspace, Workspace panels and Workspace states boards): browse the folders .env shares
 // (FILES_ROOTS), view and edit a file, upload, search, go to file, and run git on the server. Also the file and
 // folder picker the composer, the agent's folder button and "Save to workspace" use.
-import { html, useState, useEffect, useRef, useMemo, store, useStore, cx, api, toast, navigate, basename, dirname, size, ago,
+import { html, useState, useEffect, useRef, useMemo, store, useStore, cx, api, toast, navigate, basename, dirname, within, size, ago,
   readBase64, rawUrl, isImage } from './lib.js';
 import { Icon } from './icons.js';
 import { Dialog, Menu, MenuItem, MenuSep, confirm, useToggle } from './ui.js';
@@ -90,10 +90,10 @@ export function FilesScreen() {
   if (!folder) return html`<${FilesFrame}><${Roots} roots=${roots} onOpen=${go} /><//>`;
 
   const crumbs = [];
-  const root = roots.find((r) => folder === r.path || folder.startsWith(`${r.path}/`));
+  const root = roots.filter((r) => within(folder, r.path)).sort((a, b) => b.path.length - a.path.length)[0];
   if (root) {
     crumbs.push([root.name, root.path]);
-    let at = root.path;
+    let at = root.path.replace(/\/+$/, '');
     for (const part of folder.slice(root.path.length).split('/').filter(Boolean)) { at = `${at}/${part}`; crumbs.push([part, at]); }
   }
   const dirty = file && file.text != null && file.text !== file.saved;
@@ -396,7 +396,7 @@ function GoToFile({ folder, onOpen, onClose }) {
 export function FilePicker({ mode = 'files', start, title, onPick, onClose, name: initialName = '', content }) {
   const config = useStore((s) => s.config);
   const roots = config?.roots || [];
-  const startAt = start && roots.some((r) => start === r.path || start.startsWith(`${r.path}/`)) ? start : '';
+  const startAt = start && roots.some((r) => within(start, r.path)) ? start : '';
   const [at, setAt] = useState(startAt);
   const [listing, setListing] = useState(null);
   const [picked, setPicked] = useState([]);
@@ -407,9 +407,10 @@ export function FilePicker({ mode = 'files', start, title, onPick, onClose, name
     api(`/api/fs/list?path=${q(at)}`).then(setListing).catch((e) => { toast(e.message); setAt(''); });
   }, [at]);
   const toggle = (entry) => setPicked((p) => (p.some((x) => x.path === entry.path) ? p.filter((x) => x.path !== entry.path) : [...p, entry]));
+  // Close first: a caller may open another layer from onPick (the project form comes back with the folder).
   const done = async () => {
-    if (mode === 'files') { onPick(picked); onClose(); return; }
-    if (mode === 'folder') { onPick(typed.trim() || at); onClose(); return; }
+    if (mode === 'files') { onClose(); onPick(picked); return; }
+    if (mode === 'folder') { onClose(); onPick(typed.trim() || at); return; }
     if (!name.trim() || !at) return;
     const path = `${at}/${name.trim()}`;
     try {
@@ -417,14 +418,22 @@ export function FilePicker({ mode = 'files', start, title, onPick, onClose, name
       if (exists && !window.confirm(`${name.trim()} already exists. Replace it?`)) return;
       await api('/api/fs/write', { method: 'POST', body: { path, content } });
       toast(`Saved ${name.trim()}.`, { action: 'Open', onAction: () => navigate(`#/files?path=${q(at)}&file=${q(path)}`) });
-      onPick?.(path);
       onClose();
+      onPick?.(path);
+    } catch (e) { toast(e.message); }
+  };
+  const makeFolder = async () => {
+    const folderName = window.prompt('New folder name');
+    if (!folderName?.trim() || !at) return;
+    try {
+      const made = await api('/api/fs/mkdir', { method: 'POST', body: { path: `${at}/${folderName.trim()}` } });
+      setAt(made.path);
     } catch (e) { toast(e.message); }
   };
   const label = title || (mode === 'folder' ? 'Choose a folder' : mode === 'save' ? 'Save to workspace' : 'Attach from files');
   return html`<${Dialog} onClose=${onClose} label=${label} width=${560}>
     <div class="dh"><span class="ico"><${Icon} name=${mode === 'save' ? 'save' : 'folder'} /></span><div style="flex: 1; min-width: 0"><h3>${label}</h3>
-      <p class="mono" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${at || 'Shared folders'}</p></div></div>
+      <p class="mono" title=${at} style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left">\u200e${at || 'Shared folders'}</p></div></div>
     <div class="db" style="padding-top: 12px">
       <div class="picker-files">
         ${!at && roots.map((r) => html`<button key=${r.path} class="fm-row" onClick=${() => setAt(r.path)} disabled=${!r.exists}><${Icon} name="folder" size=${15} style="color: var(--ac-tx)" /><span class="t">${r.name}</span><span class="meta mono">${r.path}</span></button>`)}
@@ -446,9 +455,10 @@ export function FilePicker({ mode = 'files', start, title, onPick, onClose, name
     </div>
     <div class="df">
       ${mode === 'files' && html`<span class="meta" style="margin-right: auto">${picked.length ? `${picked.length} selected` : 'Pick one or more files'}</span>`}
+      ${mode !== 'files' && at && html`<button class="btn btn-g" style="margin-right: auto" onClick=${makeFolder}><${Icon} name="folder-plus" />New folder</button>`}
       <button class="btn btn-g" onClick=${onClose}>Cancel</button>
       <button class="btn btn-p" onClick=${done} disabled=${mode === 'files' ? !picked.length : mode === 'folder' ? !(at || typed.trim()) : !(at && name.trim())}>
-        ${mode === 'files' ? 'Attach' : mode === 'folder' ? 'Use this folder' : 'Save'}</button>
+        ${mode === 'files' ? 'Attach' : mode === 'folder' ? (at ? `Use ${basename(at)}` : typed.trim() ? 'Use this folder' : 'Open a folder first') : 'Save'}</button>
     </div>
   <//>`;
 }
