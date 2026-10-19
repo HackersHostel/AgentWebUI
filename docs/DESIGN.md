@@ -23,7 +23,18 @@ Motion durations and reduced-motion rules, the Accessibility focus and keyboard 
 | Rich replies | `js/markdown.js` | Headings, lists, tables, quotes, links, code with highlighting |
 | Sidebar states | `js/sidebar.js` | Empty, grouped by day, row menu, inline rename, delete with confirm |
 | Settings · appearance | `js/settings.js`, `js/prefs.js` | All eight themes, custom theme with the contrast check, fonts, code fonts, text size, density, preview |
-| Settings · providers | `js/settings.js` | Providers and agents from .env with live status, Test, Models |
+| Settings · providers | `js/settings.js` | Providers and agents from .env with live status, Test, Models (show or hide each), default for new chats |
+| Settings more (Chat, Notifications, Keyboard, Voice) | `js/settings.js`, `js/prefs.js` | Default target, instructions, temperature, length, Enter to send, start page, reset to defaults; notification matrix and webhook; language, voice, speed, read aloud |
+| Agent in chat: agent › model › folder | `js/composer.js` | Model menu from the agent's `configOptions` (model, effort, toggles, grouped, searchable), "Switched to …" marker, ⌘M |
+| Agent asks, Question types | `js/choices.js` | Single, multi, confirm, text, scale, number, date, searchable select, rank; paginated sets with review; 1–9 and ↵ |
+| ChatMore (attachments, dictation, read aloud, cut off) | `js/composer.js`, `js/messages.js`, `js/voice.js` | + menu, drop, paste, chips; dictation with interim words; read aloud with progress; Continue after a cut-off reply |
+| Chat panels (controls) | `js/chat.js` | Instructions, temperature and max reply length saved on the chat; a Files tab |
+| Voice mode | `js/voice.js` | Orb, listening, thinking, using a tool, speaking, needs approval (say “allow”), microphone blocked, captions |
+| Workspace, Workspace panels, Workspace states | `js/files.js` | Folder list with Git status letters, viewer and editor with line numbers, Markdown preview, Git panel (branch, pull, push, changes, diff, commit, history), search in files, go to file ⌘P, clone |
+| Project | `js/projects.js`, `js/sidebar.js` | Folder, default agent or model, instructions; chats grouped under it; Move to project |
+| Organize chats | `js/sidebar.js` | Pinned, Projects, Archived; row menu with pin, move, clone, export, archive |
+| Artifacts (Lite version) | `js/messages.js` | Images and files from agents and models in the chat, HTML/SVG preview in a sandboxed frame, Save to workspace |
+| Brand | `server.py`, `index.html` | Name, logo, greeting, theme and accent from .env; manifest for installing |
 | Sign in | `js/states.js` | |
 | App states (SystemStates) | `js/states.js` | Offline banner, loading, not found, page error |
 | Mobile · chat, Tablet portrait, Tablet landscape | `css/app.css` | Phone header and composer under 760px, rail and drawer under 1024px, slide-over context panel under 1180px |
@@ -32,14 +43,8 @@ Motion durations and reduced-motion rules, the Accessibility focus and keyboard 
 
 ## Drawn but not running in Lite
 
-These controls are on the built screens, as designed. Using one shows “… isn’t part of AgentWebUI Lite.”
-
-Sidebar: Projects, Workspaces, Prompt library, Pin, Move to project, Clone, Share, Archive.
-Header: Share, Export. Composer: Attach files, Web search, No project, Dictate.
-Replies: Edit a sent message, Branch, Read aloud, Apply to workspace. Home: Temporary chat, Analyze a file, From library.
-Context panel: Temperature and Max reply length (requests use the provider’s defaults).
-Settings: Account & security, Chat, Voice, Integrations, Workspaces & Git, People, Roles & access, Defaults, Start page.
-Good and Bad reply only toggle on the page.
+Nothing. Every visible control works; controls for features outside Lite were removed (People, Roles & access,
+Integrations, Share, Account & security, the prompt library, Web search). `notInLite()` is gone.
 
 ## Where Lite differs from the boards, and why
 
@@ -53,14 +58,20 @@ Good and Bad reply only toggle on the page.
 - **Context panel**: the board’s context-window bar needs the model’s limit, which an OpenAI-compatible API does not
   report, so the panel shows what is sent (from the provider’s token count when it reports one).
 - **Notifications** (the bell) turn on browser notifications for replies that need you or finish in the background.
+  The board's "someone shares with me" and "invitation accepted" rows are left out (no accounts); "an agent waits for
+  you" is added. The webhook is `NOTIFY_WEBHOOK` in .env.
+- **Agent questions** use a ```` ```choices ```` block in the reply, since ACP has no question message yet. The card
+  is the AskTypes board; the answer is sent as the next message. The file-request type uses the + menu instead.
+- **Voice mode** uses the browser's speech recognition and synthesis, so there is no realtime model or voice picker
+  from the board; the voice comes from Settings › Voice.
+- **Files** follows the Workspace boards without the editor's diff-review and history-restore flows: Git does that.
 - **Fonts**: Geist and Geist Mono ship with the app. Inter, IBM Plex, Plus Jakarta Sans, Atkinson Hyperlegible, Source
   Serif, JetBrains Mono and Fira Code load from Google Fonts only when chosen.
 - **Maths** in replies shows as inline code; KaTeX would add about 1 MB.
 
 ## Not built (whole boards for features outside Lite)
 
-Admin (people, roles, access, system, sandbox, agents and voice, shared providers, more), projects, sharing, folders,
-organize chats, compaction, knowledge and memory, prompt library and slash commands, workflows, usage and API tokens,
-backup, voice mode, terminal and workspace panels, change review, artifacts, agent builder and agents page, plugins,
-tool policies, MCP in chat, setup and access states, security flows, the agent question cards (AgentAsk, AskTypes,
-AskSchema: ACP has no question message yet), agent identity and pairing, and the phone screens for those features.
+Admin (people, roles, access, system, sandbox, agents and voice, shared providers, more), sharing, folders,
+compaction, knowledge and memory, prompt library, workflows, usage and API tokens, terminal, change review, agent
+builder and agents page, plugins, tool policies, MCP in chat, setup and access states, security flows, agent identity
+and pairing, and the phone screens for those features.

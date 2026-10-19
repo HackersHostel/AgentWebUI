@@ -6,7 +6,15 @@ out the work that takes it to at least 8/10. White label is part of the plan.
 
 Assessed 2026-10-19 against `main` at 6989138 (about 4,000 lines of Python and JavaScript, 21 tests passing).
 
-## Why it is 3/10 today
+## Status (2026-10-19)
+
+✅ marks what is built. Beyond the list: the picker card (agents and models ask with a `choices` block), files and
+images from agents shown in the chat, and hands-free voice mode in the browser. Still open: 2.1 Hermes end to end (not
+installed on the build machine), 2.4 the Account & security page (left out on purpose), 3.4 the prompt library (left
+out on purpose), 3.5 the web search toggle (an agent's own toggle already shows in its model menu when it reports
+one), 3.6 share links.
+
+## Why it was 3/10
 
 The core works. Model chats stream, and agent chats show steps, plans, diffs and permission cards. Chats survive a
 closed tab. Appearance settings are complete. Three things pull the score down:
@@ -78,37 +86,37 @@ Effort: **S** is under a day, **M** is one to three days, **L** is about a week.
 
 | # | Feature | Effort | Notes |
 |---|---|---|---|
-| 1.1 | **No dead controls** | S | Every control either works or is hidden. Remove People, Roles & access, Integrations and Share (until 3.6). Hide the rest until the item below builds it. Rule from now on: nothing visible may say "isn't part of Lite". |
-| 1.2 | **Agent › Model › Workspace** | M | Choosing an agent doesn't fix the model. The agent bar reads agent › model › folder. The model menu lists the agent's own models, effort and toggles from ACP `configOptions` (`session/set_config_option`; the legacy `session/set_model` as a fallback). The model can change mid-chat, and the choice survives a restart. The full brief is Milestone 1 in [GOAL.md](GOAL.md). |
-| 1.3 | **Attachments** | M | Images and text files. Model chats send them as message parts, agent chats as ACP `image` and `resource` blocks. Enables Attach files and Analyze a file. |
-| 1.4 | **Edit a sent message** | S | Edit, then answer again from that point; later messages are replaced. No branching. |
-| 1.5 | **Pin and archive chats** | S | One column each in SQLite. The sidebar shows Pinned above the day groups and has an Archived view. |
-| 1.6 | **Export a chat** | S | Markdown and JSON download from the header. |
-| 1.7 | **Temporary chat** | S | A chat that is never written to SQLite and disappears when closed. |
-| 1.8 | **Settings › Chat and Defaults** | S | Default model or agent, system prompt, Enter-to-send, auto title, start page. Kept as browser preferences, with .env defaults. |
-| 1.9 | **Temperature and max length** | S | The context panel already draws them. Send them with model requests. |
-| 1.10 | **Dictation and read aloud** | S | The browser's own speech: speech recognition for Dictate, speech synthesis for Read aloud. Nothing on the server. Each button shows only when the browser supports it and has microphone permission. Settings › Voice holds the language and the voice. |
-| 1.11 | **Branching** | M | Each reply records which message it answers. Editing or regenerating adds a version instead of replacing one, with a "‹ 2 / 3 ›" switcher on the message. Nothing else. |
-| 1.12 | **Clone a chat** | S | Copies the messages into a new chat. An agent chat's copy starts a fresh agent session in the same folder. |
+| 1.1 | ✅ **No dead controls** | S | Every control either works or is hidden. Remove People, Roles & access, Integrations and Share (until 3.6). Hide the rest until the item below builds it. Rule from now on: nothing visible may say "isn't part of Lite". |
+| 1.2 | ✅ **Agent › Model › Workspace** | M | Choosing an agent doesn't fix the model. The agent bar reads agent › model › folder. The model menu lists the agent's own models, effort and toggles from ACP `configOptions` (`session/set_config_option`; the legacy `session/set_model` as a fallback). The model can change mid-chat, and the choice survives a restart. The full brief is Milestone 1 in [GOAL.md](GOAL.md). |
+| 1.3 | ✅ **Attachments** | M | Images and text files. Model chats send them as message parts, agent chats as ACP `image` and `resource` blocks. Enables Attach files and Analyze a file. |
+| 1.4 | ✅ **Edit a sent message** | S | Edit, then answer again from that point; later messages are replaced. No branching. |
+| 1.5 | ✅ **Pin and archive chats** | S | One column each in SQLite. The sidebar shows Pinned above the day groups and has an Archived view. |
+| 1.6 | ✅ **Export a chat** | S | Markdown and JSON download from the header. |
+| 1.7 | ✅ **Temporary chat** | S | A chat that is never written to SQLite and disappears when closed. |
+| 1.8 | ✅ **Settings › Chat and Defaults** | S | Default model or agent, system prompt, Enter-to-send, auto title, start page. Kept as browser preferences, with .env defaults. |
+| 1.9 | ✅ **Temperature and max length** | S | The context panel already draws them. Send them with model requests. |
+| 1.10 | ✅ **Dictation and read aloud** | S | The browser's own speech: speech recognition for Dictate, speech synthesis for Read aloud. Nothing on the server. Each button shows only when the browser supports it and has microphone permission. Settings › Voice holds the language and the voice. |
+| 1.11 | ✅ **Branching** | M | Each reply records which message it answers. Editing or regenerating adds a version instead of replacing one, with a "‹ 2 / 3 ›" switcher on the message. Nothing else. |
+| 1.12 | ✅ **Clone a chat** | S | Copies the messages into a new chat. An agent chat's copy starts a fresh agent session in the same folder. |
 
 ### Tier 2: Hermes and the VPS (takes it to about 7.5/10)
 
 | # | Feature | Effort | Notes |
 |---|---|---|---|
 | 2.1 | **Hermes as a first-class agent** | S–M | `AGENT_HERMES_COMMAND=hermes acp` is already in `.env.example` but untested: Hermes is not installed on the dev machine. Install it, run the ACP flow end to end (session load, modes, permissions, diffs), and fix what differs. Add a Hermes fake to the tests. |
-| 2.2 | **Deployment** | M | Dockerfile and compose, or a systemd unit, plus a Caddy file for TLS. Turn off SSE buffering at the proxy. Trust `X-Forwarded-Proto` so the cookie is marked secure. Run under a dedicated Unix user. Add a health endpoint and a deploy section in the README. |
-| 2.3 | **Hardening for a public server** | S–M | Login rate limiting and lockout. Restrict agent folders to the same `FILES_ROOTS` that 2.5 uses, so one setting covers both. Add a "sign out everywhere" action that rotates the cookie key. Recommend putting the app behind Tailscale or Cloudflare Access: whoever has the password can make an agent run commands on the VPS. |
+| 2.2 | ✅ **Deployment** | M | Dockerfile and compose, or a systemd unit, plus a Caddy file for TLS. Turn off SSE buffering at the proxy. Trust `X-Forwarded-Proto` so the cookie is marked secure. Run under a dedicated Unix user. Add a health endpoint and a deploy section in the README. |
+| 2.3 | ✅ **Hardening for a public server** | S–M | Login rate limiting and lockout. Restrict agent folders to the same `FILES_ROOTS` that 2.5 uses, so one setting covers both. Add a "sign out everywhere" action that rotates the cookie key. Recommend putting the app behind Tailscale or Cloudflare Access: whoever has the password can make an agent run commands on the VPS. |
 | 2.4 | **Account & security, Lite version** | S | One page: where you are signed in, sign out everywhere, and which folders and agents are allowed. Read-only, since the settings live in .env. |
-| 2.5 | **Workspace & Git** | M | `FILES_ROOTS` in .env lists the paths on the VPS that can be browsed. A file tree, then view and edit a file, in the context panel or a page of its own. Git (`status`, `diff`, `commit`, `branch`, `push`, `pull`) runs the server's `git` command. It uses the server's own Git sign-in; give it a deploy key per repository, or a bot account. An agent chat opens on its own folder. No terminal, no full code editor. Fills Workspaces in the sidebar, Settings › Workspaces & Git, and Apply to workspace. |
-| 2.6 | **Backup** | S | Document a copy of `data/chats.db` (SQLite `.backup`) and add a cron line. |
+| 2.5 | ✅ **Workspace & Git** | M | `FILES_ROOTS` in .env lists the paths on the VPS that can be browsed. A file tree, then view and edit a file, in the context panel or a page of its own. Git (`status`, `diff`, `commit`, `branch`, `push`, `pull`) runs the server's `git` command. It uses the server's own Git sign-in; give it a deploy key per repository, or a bot account. An agent chat opens on its own folder. No terminal, no full code editor. Fills Workspaces in the sidebar, Settings › Workspaces & Git, and Apply to workspace. |
+| 2.6 | ✅ **Backup** | S | Document a copy of `data/chats.db` (SQLite `.backup`) and add a cron line. |
 
 ### Tier 3: our product (takes it to 8+/10)
 
 | # | Feature | Effort | Notes |
 |---|---|---|---|
-| 3.1 | **White label** | S–M | Set in .env: `BRAND_NAME`, `BRAND_LOGO` (file path or URL), `BRAND_FAVICON`, `BRAND_ACCENT`, `BRAND_THEME` (default theme), `BRAND_GREETING`, `BRAND_POWERED_BY=false`. Served through `/api/config` and `/brand/*`. They apply to the page title, sidebar, sign-in, home greeting, favicon and app manifest. The current logo and name become the defaults. Removing the visible "AgentWebUI" text from the client is part of the work. |
-| 3.2 | **Installable app** | S | Web manifest and icons generated from the white-label settings, so the VPS URL installs on a phone or desktop with our name and logo. No offline mode. |
-| 3.3 | **Projects, Lite version** | M | A project is a folder on the VPS plus a default agent or model and standing instructions. Chats are grouped under it in the sidebar. This fits agent work better than the full product's projects, and covers the "Project" control in the composer. |
+| 3.1 | ✅ **White label** | S–M | Set in .env: `BRAND_NAME`, `BRAND_LOGO` (file path or URL), `BRAND_FAVICON`, `BRAND_ACCENT`, `BRAND_THEME` (default theme), `BRAND_GREETING`, `BRAND_POWERED_BY=false`. Served through `/api/config` and `/brand/*`. They apply to the page title, sidebar, sign-in, home greeting, favicon and app manifest. The current logo and name become the defaults. Removing the visible "AgentWebUI" text from the client is part of the work. |
+| 3.2 | ✅ **Installable app** | S | Web manifest and icons generated from the white-label settings, so the VPS URL installs on a phone or desktop with our name and logo. No offline mode. |
+| 3.3 | ✅ **Projects, Lite version** | M | A project is a folder on the VPS plus a default agent or model and standing instructions. Chats are grouped under it in the sidebar. This fits agent work better than the full product's projects, and covers the "Project" control in the composer. |
 | 3.4 | **Prompt library, Lite version** | M | Saved prompts in SQLite, inserted with `/` in the composer, next to the agent's own slash commands from 1.2. Covers "From library" and the sidebar entry. |
 | 3.5 | **Web search toggle** | S–M | The composer's Web search turns the agent's own web search on or off. Lite runs no search itself. It uses the agent's ACP config option when the agent reports one. Otherwise it uses a launch setting per agent in .env (Codex has a search flag; Claude Code and Hermes have tool settings). Check each agent while doing 2.1. The button is hidden for model chats and for agents with no way to switch search. |
 | 3.6 | **Read-only share link** | M | Optional. A signed link to a snapshot of one chat. Only worth it if we show chats to people outside the server. |
