@@ -55,6 +55,7 @@ TURNS = web.AppKey("turns", dict)
 TOKEN = web.AppKey("token", str)
 HTTP = web.AppKey("http", aiohttp.ClientSession)
 LOGINS = web.AppKey("logins", dict)
+ASSETS = web.AppKey("assets", str)
 
 
 def create_app(settings: Settings) -> web.Application:
@@ -68,7 +69,9 @@ def create_app(settings: Settings) -> web.Application:
     app[TURNS] = {}
     app[LOGINS] = {}
     app[TOKEN] = session_token(settings) if settings.password else ""
+    app[ASSETS] = _assets_version()
     app.cleanup_ctx.append(_lifetime)
+    app.on_response_prepare.append(_revalidate_assets)
     app.add_routes([
         web.get("/", index),
         web.get("/manifest.webmanifest", manifest),
@@ -121,6 +124,7 @@ def create_app(settings: Settings) -> web.Application:
         web.post("/api/git/sync", git_sync),
         web.post("/api/git/init", git_init),
         web.post("/api/git/clone", git_clone),
+        web.static(f"/assets/{app[ASSETS]}", STATIC),
         web.static("/assets", STATIC),
     ])
     return app
@@ -140,6 +144,24 @@ async def _lifetime(app: web.Application):
     await http.close()
     app[STORE].close()
     app[TEMP].close()
+
+
+def _assets_version() -> str:
+    """Changes whenever a client file does. The page loads the client from /assets/<version>/, so after an update
+    no browser can reuse a module it cached from the old one."""
+    digest = hashlib.sha256()
+    for path in sorted(STATIC.rglob("*")):
+        if path.is_file():
+            stat = path.stat()
+            digest.update(f"{path.relative_to(STATIC)}:{stat.st_size}:{stat.st_mtime_ns}\n".encode())
+    return digest.hexdigest()[:12]
+
+
+async def _revalidate_assets(request: web.Request, response: web.StreamResponse) -> None:
+    """The browser checks every client file on each load (a cheap 304), so an update never mixes old and new
+    modules into a blank page."""
+    if request.path.startswith("/assets/"):
+        response.headers.setdefault("Cache-Control", "no-cache")
 
 
 def session_token(settings: Settings) -> str:
@@ -218,6 +240,7 @@ async def index(request: web.Request) -> web.Response:
     settings = request.app[SETTINGS]
     page = (STATIC / "index.html").read_text(encoding="utf-8")
     page = page.replace("<title>AgentWebUI Lite</title>", f"<title>{_html(settings.brand_name)}</title>")
+    page = page.replace('"/assets/', f'"/assets/{request.app[ASSETS]}/')
     return web.Response(text=page, content_type="text/html", headers={"Cache-Control": "no-cache"})
 
 
