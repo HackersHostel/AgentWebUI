@@ -135,7 +135,7 @@ function App() {
 async function boot() {
   try {
     const session = await api('/api/session');
-    store.set({ passwordRequired: session.password_required, signedIn: session.signed_in });
+    store.set({ passwordRequired: session.password_required, emailRequired: session.email_required, signedIn: session.signed_in });
     if (!session.signed_in) return;
     const config = await loadConfig();
     brandDefaults(config.brand);
