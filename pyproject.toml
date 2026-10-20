@@ -1,16 +1,24 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentwebui-lite"
-version = "0.1.0"
+dynamic = ["version"]  # agentwebui_lite.__version__
 description = "A light web interface for AI models and command-line agents."
+readme = "README.md"
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE"]
+authors = [{ name = "SovereignML, L.L.C." }]
 requires-python = ">=3.11"
+classifiers = ["Programming Language :: Python :: 3"]
 dependencies = ["aiohttp>=3.9,<4"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-aiohttp>=1.0"]
+
+[project.urls]
+Source = "https://github.com/SovereignML/AgentWebUI-Lite"
 
 [project.scripts]
 agentwebui-lite = "agentwebui_lite.__main__:main"
@@ -18,8 +26,11 @@ agentwebui-lite = "agentwebui_lite.__main__:main"
 [tool.setuptools.packages.find]
 include = ["agentwebui_lite*"]
 
+[tool.setuptools.dynamic]
+version = { attr = "agentwebui_lite.__version__" }
+
 [tool.setuptools.package-data]
-agentwebui_lite = ["static/*", "static/*/*"]
+agentwebui_lite = ["static/**/*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

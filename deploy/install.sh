@@ -3,7 +3,7 @@
 # systemd service, Claude Code and Codex over ACP, Caddy for HTTPS, and a daily backup. Run it again to update.
 #
 #   sudo DOMAIN=chat.example.com ./deploy/install.sh            # from a checkout
-#   curl -fsSL https://raw.githubusercontent.com/HackersHostel/AgentWebUI-Lite/main/deploy/install.sh \
+#   curl -fsSL https://raw.githubusercontent.com/SovereignML/AgentWebUI-Lite/main/deploy/install.sh \
 #     | sudo DOMAIN=chat.example.com bash                        # straight from GitHub
 #
 # DOMAIN    the name that points at this server; Caddy gets its certificate. Empty: no Caddy, and the app answers
@@ -16,7 +16,7 @@ DOMAIN=${DOMAIN:-}
 AGENTS=${AGENTS-claude,codex}
 APP_USER=${APP_USER:-agentwebui}
 PORT=${PORT:-3000}
-REPO=${REPO:-https://github.com/HackersHostel/AgentWebUI-Lite.git}
+REPO=${REPO:-https://github.com/SovereignML/AgentWebUI-Lite.git}
 BRANCH=${BRANCH:-main}
 PREFIX=${PREFIX:-/opt/agentwebui-lite}
 CONF=/etc/agentwebui-lite
