@@ -40,6 +40,8 @@ cp .env.example .env        # then turn on a model provider or an agent
 
 Run the tests with `.venv/bin/pip install -e '.[dev]' && .venv/bin/pytest`.
 
+Or install the released package: `pip install agentwebui-lite` (that is how Atlas Agents' servers get it).
+
 ## Put it on a VPS
 
 Two ways; both end with the app behind Caddy on HTTPS. Point a DNS name at the server first.
@@ -49,7 +51,7 @@ Two ways; both end with the app behind Caddy on HTTPS. Point a DNS name at the s
 On a fresh Ubuntu 22.04+ or Debian 12+ server:
 
 ```bash
-git clone https://github.com/HackersHostel/AgentWebUI-Lite.git && cd AgentWebUI-Lite
+git clone https://github.com/SovereignML/AgentWebUI-Lite.git && cd AgentWebUI-Lite
 sudo DOMAIN=chat.example.com ./deploy/install.sh
 ```
 
@@ -148,3 +150,15 @@ Lite departs from the boards.
 | `/` | The agent's slash commands (agent chats) |
 | `Esc` | Stop the reply, or close the top layer |
 | `?` | All shortcuts |
+
+## Releases
+
+Bump `__version__` in `agentwebui_lite/__init__.py`, merge to `main`, then tag it: `git tag v0.1.1 && git push origin
+v0.1.1`. The Release workflow runs the tests, checks the tag matches the version, builds, and publishes to PyPI
+through trusted publishing (no token is stored). Atlas Agents pins the version it installs, so a release reaches
+agents only when the app's pin moves.
+
+## License
+
+Proprietary. Copyright (c) 2026 SovereignML, L.L.C. All rights reserved. The package is on PyPI so our servers can
+install it; that grants no license to use it. See [LICENSE](LICENSE).
