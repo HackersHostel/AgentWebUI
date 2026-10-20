@@ -37,6 +37,8 @@ export function Loading() {
 }
 
 export function SignIn() {
+  const emailRequired = useStore((s) => s.emailRequired);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -45,11 +47,13 @@ export function SignIn() {
     setBusy(true);
     setError('');
     try {
-      await api('/api/login', { method: 'POST', body: { password } });
+      await api('/api/login', { method: 'POST', body: emailRequired ? { email, password } : { password } });
       store.set({ signedIn: true });
       window.dispatchEvent(new Event('awl:signed-in'));
     } catch (err) {
-      setError(err.status === 401 ? 'That password isn’t right. It is the PASSWORD set in the server’s .env file.' : err.message);
+      setError(err.status !== 401 ? err.message
+        : emailRequired ? 'That email or password isn’t right. Use the ones your dashboard shows for this server.'
+          : 'That password isn’t right. It is the PASSWORD set in the server’s .env file.');
     } finally { setBusy(false); }
   };
   return html`<div class="signin">
@@ -59,13 +63,18 @@ export function SignIn() {
         <div class="signin-form">
           <div><h1>Welcome back</h1><p>Sign in to your ${brandName()} server.</p></div>
           <form onSubmit=${submit} style="display: flex; flex-direction: column; gap: 14px">
+            ${emailRequired && html`<div class="f"><label for="em">Email</label>
+              <input id="em" class=${error ? 'inp err' : 'inp'} type="email" autocomplete="username" value=${email}
+                onInput=${(e) => setEmail(e.target.value)} autofocus aria-invalid=${!!error} /></div>`}
             <div class="f"><label for="pw">Password</label>
               <input id="pw" class=${error ? 'inp err' : 'inp'} type="password" autocomplete="current-password" value=${password}
-                onInput=${(e) => setPassword(e.target.value)} autofocus aria-invalid=${!!error} aria-describedby=${error ? 'pw-err' : undefined} />
+                onInput=${(e) => setPassword(e.target.value)} autofocus=${!emailRequired} aria-invalid=${!!error} aria-describedby=${error ? 'pw-err' : undefined} />
               ${error && html`<small id="pw-err" role="alert" style="color: var(--bad)">${error}</small>`}</div>
-            <button class="btn btn-p btn-lg" type="submit" disabled=${busy || !password} style="margin-top: 4px">${busy ? 'Signing in…' : 'Sign in'}</button>
+            <button class="btn btn-p btn-lg" type="submit" disabled=${busy || !password || (emailRequired && !email)} style="margin-top: 4px">${busy ? 'Signing in…' : 'Sign in'}</button>
           </form>
-          <p style="margin: 0; text-align: center; font-size: 13px; color: var(--tx-3)">Forgot it? Whoever runs this server can change PASSWORD in .env.</p>
+          <p style="margin: 0; text-align: center; font-size: 13px; color: var(--tx-3)">${emailRequired
+            ? 'Forgot them? Your dashboard shows the email and password for this server.'
+            : 'Forgot it? Whoever runs this server can change PASSWORD in .env.'}</p>
         </div>
       </div>
       <div class="signin-foot"><span>${location.host}</span><span style="margin-left: auto">Self-hosted · your chats stay on this server</span></div>

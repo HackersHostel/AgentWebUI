@@ -2,7 +2,8 @@
 
 Models:  PROVIDER_<ID>_URL, PROVIDER_<ID>_KEY, PROVIDER_<ID>_MODELS (comma list; else asked from <url>/models),
          PROVIDER_<ID>_NAME
-Agents:  AGENT_<ID>_COMMAND (an ACP agent's command line), AGENT_<ID>_NAME, AGENT_<ID>_CWD, AGENT_<ID>_MODEL
+Agents:  AGENT_<ID>_COMMAND (an ACP agent's command line), AGENT_<ID>_NAME, AGENT_<ID>_CWD, AGENT_<ID>_MODEL,
+         AGENT_<ID>_MODELS (comma list; the only models the page offers for that agent)
 Files:   FILES_ROOTS (folders the file manager may open and agents may work in; else WORKSPACE_DIR and agent folders)
 A value may name another variable as ${NAME}, so keys can stay in the shell environment.
 """
@@ -16,6 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 ID = re.compile(r"^(PROVIDER|AGENT)_([A-Z0-9]+)_([A-Z]+)$")
+SETTINGS_LIKE_IDS = {"AGENT_IDLE_MINUTES"}  # shaped like an agent key, but a server setting
 VARIABLE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 
@@ -39,6 +41,7 @@ class Agent:
     command: tuple[str, ...]
     cwd: str
     model: str = ""  # the model a new chat starts on when the browser has no choice saved
+    models: tuple[str, ...] = ()  # when set, the only models the page offers, whatever the agent lists
 
 
 @dataclass(frozen=True)
@@ -47,6 +50,7 @@ class Settings:
     port: int = 3000
     data_dir: Path = Path("data")
     password: str = ""
+    login_email: str = ""  # when set, signing in asks for this email as well as PASSWORD
     user_name: str = ""
     system_prompt: str = ""
     workspace: str = ""
@@ -120,7 +124,7 @@ def load(env_file: Path | None = None, environ: dict[str, str] | None = None) ->
     groups: dict[tuple[str, str], dict[str, str]] = {}
     for key, value in env.items():
         match = ID.match(key)
-        if match:
+        if match and key not in SETTINGS_LIKE_IDS:
             groups.setdefault((match[1], match[2].lower()), {})[match[3]] = value
 
     workspace = env.get("WORKSPACE_DIR", "") or str(Path.home())
@@ -136,8 +140,9 @@ def load(env_file: Path | None = None, environ: dict[str, str] | None = None) ->
             command = tuple(shlex.split(values.get("COMMAND", "")))
             if not command:
                 raise ConfigError(f"AGENT_{ident.upper()}_COMMAND is missing")
+            models = tuple(m.strip() for m in values.get("MODELS", "").split(",") if m.strip())
             agents.append(Agent(ident, values.get("NAME") or ident, command,
-                                os.path.expanduser(values.get("CWD") or workspace), values.get("MODEL", "")))
+                                os.path.expanduser(values.get("CWD") or workspace), values.get("MODEL", ""), models))
 
     try:
         port = int(env.get("PORT", "3000"))
@@ -149,7 +154,7 @@ def load(env_file: Path | None = None, environ: dict[str, str] | None = None) ->
                   for r in env.get("FILES_ROOTS", "").split(",") if r.strip())
     settings = Settings(
         host=env.get("HOST", "127.0.0.1"), port=port, data_dir=Path(env.get("DATA_DIR", "data")),
-        password=env.get("PASSWORD", ""), user_name=env.get("USER_NAME", "").strip()[:60],
+        password=env.get("PASSWORD", ""), login_email=env.get("LOGIN_EMAIL", "").strip().lower(), user_name=env.get("USER_NAME", "").strip()[:60],
         system_prompt=env.get("SYSTEM_PROMPT", ""),
         workspace=os.path.expanduser(workspace), agent_idle_minutes=idle,
         providers=tuple(providers), agents=tuple(agents), files_roots=roots,
@@ -163,6 +168,8 @@ def load(env_file: Path | None = None, environ: dict[str, str] | None = None) ->
         lock_model=_yes(env.get("LOCK_MODEL", "")), lock_folder=_yes(env.get("LOCK_FOLDER", "")))
     if not settings.password and not is_loopback(settings.host):
         raise ConfigError(f"HOST={settings.host} is reachable from other machines: set PASSWORD in .env")
+    if settings.login_email and not settings.password:
+        raise ConfigError("LOGIN_EMAIL is asked for together with PASSWORD, so it needs PASSWORD too")
     if settings.embed_secret and not settings.password:
         raise ConfigError("EMBED_SECRET signs browsers in, so it needs PASSWORD too")
     if settings.embed_secret and len(settings.embed_secret) < 32:

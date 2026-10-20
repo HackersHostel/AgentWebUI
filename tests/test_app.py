@@ -199,7 +199,8 @@ async def test_a_password_guards_everything_but_sign_in(settings_for, client_for
     client = await client_for(settings_for(password="secret"))
     assert (await client.get("/api/chats")).status == 401
     assert (await client.get("/")).status == 200
-    assert (await (await client.get("/api/session")).json()) == {"password_required": True, "signed_in": False}
+    assert (await (await client.get("/api/session")).json()) == {"password_required": True, "email_required": False,
+                                                                  "signed_in": False}
     assert (await client.post("/api/login", json={"password": "wrong"})).status == 401
     assert (await client.post("/api/login", json={"password": "secret"})).status == 200
     assert (await client.get("/api/chats")).status == 200

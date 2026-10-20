@@ -2,6 +2,8 @@
 model and folder (LOCK_MODEL, LOCK_FOLDER)."""
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 
 from agentwebui_lite import config
@@ -88,3 +90,70 @@ async def test_a_locked_model_cannot_be_chosen_or_changed(settings_for, client_f
     refused = await client.post(f"/api/chats/{chat['id']}/config", json={"id": "model", "value": "sonnet"})
     assert refused.status == 403
     assert (await client.post(f"/api/chats/{chat['id']}/config", json={"id": "effort", "value": "low"})).status == 200
+
+
+# --- A managed box: AGENT_IDLE_MINUTES, LOGIN_EMAIL, AGENT_<ID>_MODELS ---
+
+def test_agent_idle_minutes_is_a_setting_not_an_agent(tmp_path):
+    env = tmp_path / ".env"
+    env.write_text("AGENT_IDLE_MINUTES=30\nAGENT_HERMES_COMMAND=hermes acp\n")
+    settings = config.load(env, {})
+    assert settings.agent_idle_minutes == 30
+    assert [a.id for a in settings.agents] == ["hermes"]
+
+
+def test_login_email_and_the_model_list_are_read(tmp_path):
+    env = tmp_path / ".env"
+    env.write_text("LOGIN_EMAIL=Admin@Example.com\nAGENT_HERMES_COMMAND=hermes acp\n"
+                   "AGENT_HERMES_MODELS=a/one, b/two ,\n")
+    with pytest.raises(config.ConfigError, match="needs PASSWORD"):
+        config.load(env, {})
+    settings = config.load(env, {"PASSWORD": "p"})
+    assert settings.login_email == "admin@example.com"
+    assert settings.agents[0].models == ("a/one", "b/two")
+
+
+async def test_login_email_is_asked_for_with_the_password(settings_for, client_for):
+    client = await client_for(settings_for(password="secret", login_email="admin@example.com"))
+    assert (await (await client.get("/api/session")).json())["email_required"] is True
+    assert (await client.post("/api/login", json={"password": "secret"})).status == 401
+    wrong = await client.post("/api/login", json={"email": "someone@example.com", "password": "secret"})
+    assert wrong.status == 401 and (await wrong.json())["error"] == "wrong email or password"
+    assert (await client.post("/api/login", json={"email": "admin@example.com", "password": "no"})).status == 401
+    assert (await client.post("/api/login", json={"email": " Admin@Example.com", "password": "secret"})).status == 200
+    assert (await client.get("/api/chats")).status == 200
+
+
+def _managed(settings, models):
+    agent = settings.agents[0]
+    return dataclasses.replace(settings, agents=(dataclasses.replace(agent, models=models),))
+
+
+def _model_choices(options):
+    model = next(o for o in options if o["id"] == "model")
+    return [(c["value"], c["name"]) for c in model["options"]]
+
+
+@pytest.mark.parametrize("shape", ["options", "legacy"])
+async def test_only_the_listed_models_are_offered(settings_for, client_for, monkeypatch, shape):
+    monkeypatch.setenv("FAKE_MODE", "echo")
+    monkeypatch.setenv("FAKE_CONFIG", shape)
+    client = await client_for(_managed(settings_for(), ("sonnet", "z-ai/glm-5.1")))
+    options = (await (await client.get("/api/agents/fake/options")).json())["options"]
+    # The agent's own name stays; a model it doesn't list is offered by its id.
+    assert _model_choices(options) == [("sonnet", "Sonnet"), ("z-ai/glm-5.1", "z-ai/glm-5.1")]
+    chat = await (await client.post("/api/chats", json={"target": "agent:fake"})).json()
+    await events(await client.post(f"/api/chats/{chat['id']}/messages", json={"text": "hi"}))
+    refused = await client.post(f"/api/chats/{chat['id']}/config", json={"id": "model", "value": "opus"})
+    assert refused.status == 422
+    assert (await client.post(f"/api/chats/{chat['id']}/config", json={"id": "model", "value": "sonnet"})).status == 200
+
+
+async def test_options_cached_before_the_list_changed_are_trimmed(settings_for, client_for, monkeypatch):
+    monkeypatch.setenv("FAKE_CONFIG", "options")
+    plain = settings_for()
+    first = await client_for(plain)
+    assert len(_model_choices((await (await first.get("/api/agents/fake/options")).json())["options"])) == 2
+    client = await client_for(_managed(plain, ("sonnet",)))
+    cached = (await (await client.get("/api/config")).json())["agents"][0]["options"]
+    assert _model_choices(cached) == [("sonnet", "Sonnet")]

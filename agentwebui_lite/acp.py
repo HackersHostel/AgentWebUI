@@ -140,8 +140,9 @@ class Rpc:
 
 
 class Session:
-    def __init__(self, cwd: str) -> None:
+    def __init__(self, cwd: str, models: tuple[str, ...] = ()) -> None:
         self.cwd = cwd
+        self.models = models  # AGENT_<ID>_MODELS: when set, the model choices offered, in this order
         self.turn: Turn | None = None
         self.loading = False
         self.fresh = True  # no prompt sent yet in this session
@@ -172,6 +173,7 @@ class Session:
                 self.legacy_model = True
                 self.config = [{"id": "model", "name": "Model", "category": "model", "type": "select",
                                 "currentValue": str(models.get("currentModelId") or ""), "options": choices}]
+        self._restrict_models()
         self._modes_from_config()
 
     def replace_options(self, raw: Any) -> None:
@@ -179,7 +181,11 @@ class Session:
         if options is not None:
             self.config = options
             self.legacy_model = False
+            self._restrict_models()
             self._modes_from_config()
+
+    def _restrict_models(self) -> None:
+        restrict_models(self.config, self.models)
 
     def _modes_from_config(self) -> None:
         # A `mode` option replaces the older `modes`, so the mode button doesn't show twice.
@@ -227,6 +233,20 @@ def parse_options(raw: Any) -> list[dict[str, Any]] | None:
 def _choice(entry: dict[str, Any]) -> dict[str, str]:
     return {"value": str(entry.get("value")), "name": str(entry.get("name") or entry.get("value")),
             "description": str(entry.get("description") or "")}
+
+
+def restrict_models(options: list[dict[str, Any]] | None, models: tuple[str, ...]) -> list[dict[str, Any]] | None:
+    """Offer only `models` (AGENT_<ID>_MODELS) in the agent's model option, in place.
+
+    The server owner, not the agent, decides which models are on offer. The agent's own name for a model is kept when
+    it lists it; any other id is offered as written and the agent is asked for it by that id.
+    """
+    if models:
+        for option in options or []:
+            if option["type"] == "select" and (option["id"] == "model" or option.get("category") == "model"):
+                named = {c["value"]: c for c in choices_of(option)}
+                option["options"] = [named.get(m) or {"value": m, "name": m, "description": ""} for m in models]
+    return options
 
 
 def choices_of(option: dict[str, Any]) -> list[dict[str, str]]:
@@ -314,7 +334,7 @@ class AgentProcess:
             return session_id, self.sessions[session_id], False
         params = {"cwd": cwd, "mcpServers": []}
         if session_id and self.capabilities.get("loadSession"):
-            session = Session(cwd)
+            session = Session(cwd, self.spec.models)
             session.loading = True  # the agent replays the history as updates; the chat already has it
             self.sessions[session_id] = session
             try:
@@ -335,7 +355,7 @@ class AgentProcess:
         new_id = str((result or {}).get("sessionId") or "")
         if not new_id:
             raise AgentError(f"{self.spec.name} did not return a session")
-        session = Session(cwd)
+        session = Session(cwd, self.spec.models)
         session.set_modes((result or {}).get("modes"))
         session.set_options(result or {})
         self.sessions[new_id] = session

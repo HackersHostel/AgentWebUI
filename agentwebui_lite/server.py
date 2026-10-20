@@ -20,7 +20,7 @@ import aiohttp
 from aiohttp import web
 
 from . import __version__, workspace
-from .acp import AgentError, AgentProcess, Agents, Session, choices_of
+from .acp import AgentError, AgentProcess, Agents, Session, choices_of, restrict_models
 from .config import Settings, is_loopback
 from .providers import ProviderError, Providers
 from .store import Store
@@ -68,6 +68,12 @@ def create_app(settings: Settings) -> web.Application:
     app[AGENTS] = Agents(settings.agents, settings.agent_idle_minutes)
     for process in app[AGENTS].processes.values():
         process.on_options = app[STORE].set_agent_options
+    for agent in settings.agents:
+        # Options cached before AGENT_<ID>_MODELS changed still list the old models; everything cached after this
+        # comes from a session, which applies the list itself.
+        cached = app[STORE].agent_options(agent.id)
+        if agent.models and cached is not None:
+            app[STORE].set_agent_options(agent.id, restrict_models(cached, agent.models))
     app[TURNS] = {}
     app[LOGINS] = {}
     app[EMBEDS] = {}
@@ -334,11 +340,13 @@ async def health(request: web.Request) -> web.Response:
 async def session_state(request: web.Request) -> web.Response:
     token = request.app[TOKEN]
     signed_in = not token or hmac.compare_digest(request.cookies.get(COOKIE, ""), token)
-    return web.json_response({"password_required": bool(token), "signed_in": signed_in})
+    return web.json_response({"password_required": bool(token), "email_required": bool(request.app[SETTINGS].login_email),
+                              "signed_in": signed_in})
 
 
 async def login(request: web.Request) -> web.Response:
-    """Sign in with PASSWORD. Each address gets a few tries per ten minutes, so a guesser can't keep going."""
+    """Sign in with PASSWORD (and LOGIN_EMAIL when set). Each address gets a few tries per ten minutes, so a guesser
+    can't keep going."""
     settings = request.app[SETTINGS]
     tries = request.app[LOGINS]
     ip, now = _client_ip(request), time.monotonic()
@@ -346,11 +354,14 @@ async def login(request: web.Request) -> web.Response:
     if len(recent) >= LOGIN_TRIES:
         return _error(429, "too many wrong passwords; wait ten minutes")
     body = await _body(request)
-    if not settings.password or not hmac.compare_digest(str(body.get("password", "")).encode(),
-                                                        settings.password.encode()):
+    # Both are compared every time, so a wrong email takes as long as a wrong password.
+    email_ok = hmac.compare_digest(str(body.get("email", "")).strip().lower().encode(), settings.login_email.encode())
+    password_ok = bool(settings.password) and hmac.compare_digest(str(body.get("password", "")).encode(),
+                                                                  settings.password.encode())
+    if not (email_ok and password_ok):
         tries[ip] = [*recent, now]
         await asyncio.sleep(1)
-        return _error(401, "wrong password")
+        return _error(401, "wrong email or password" if settings.login_email else "wrong password")
     tries.pop(ip, None)
     response = web.json_response({"signed_in": True})
     response.set_cookie(COOKIE, request.app[TOKEN], max_age=60 * 60 * 24 * 30, **_cookie_options(request))
