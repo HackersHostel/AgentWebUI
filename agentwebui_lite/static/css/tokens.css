@@ -19,7 +19,8 @@
   --bg-hover: rgba(255,255,255,.045); --bg-active: rgba(255,255,255,.08); --bg-press: rgba(255,255,255,.12);
   --line: rgba(255,255,255,.07); --line-2: rgba(255,255,255,.12);
   --tx: #ededf0; --tx-2: #b4b4bc; --tx-3: #8b8b95; --tx-off: #5f5f68;
-  --ac: #6e56cf; --ac-hover: #7c66dc; --ac-press: #5e48b8; --ac-tx: #b3a4ff; --ac-soft: rgba(124,102,220,.16);
+  /* Hover and press darken the accent: white text stays above 4.5:1 (6.6:1 and 8.1:1). */
+  --ac: #6e56cf; --ac-hover: #5f48c2; --ac-press: #523ab0; --ac-tx: #b3a4ff; --ac-soft: rgba(124,102,220,.16);
   --ac-line: rgba(124,102,220,.45); --on-ac: #fff;
   --ok: #3dd68c; --ok-soft: rgba(61,214,140,.12);
   --warn: #f5b94a; --warn-soft: rgba(245,185,74,.12);
@@ -56,29 +57,46 @@
 }
 .app.graphite {
   --bg: #121417; --bg-side: #0d0f11; --bg-raised: #1a1d21; --tx: #eef1f4; --tx-2: #b8bfc9; --tx-3: #8f98a5;
-  --ac: #2563d0; --ac-hover: #2f6fe0; --ac-tx: #7fb2ff; --ac-soft: rgba(76,141,255,.16);
+  --ac: #2563d0; --ac-hover: #2f6fe0; --ac-press: #1d4fae; --ac-tx: #7fb2ff; --ac-soft: rgba(76,141,255,.16);
+  --ac-line: rgba(76,141,255,.45);
 }
 .app.terminal {
   --bg: #0a0f0b; --bg-side: #070b08; --bg-raised: #111914; --line: rgba(120,255,170,.08); --line-2: rgba(120,255,170,.14);
   --tx: #d9ffe6; --tx-2: #9fd8b2; --tx-3: #79b08d;
-  --ac: #1f8a47; --ac-hover: #23a052; --ac-tx: #5cf29a; --ac-soft: rgba(34,197,94,.16);
+  /* A deeper green so white button text reads (5.2:1, hover 6.7:1); still 3.7:1 against the page for switches. */
+  --ac: #1a7d40; --ac-hover: #156a36; --ac-press: #115a2d; --ac-tx: #5cf29a; --ac-soft: rgba(34,197,94,.16);
+  --ac-line: rgba(34,197,94,.45);
 }
 .app.paper {
   --bg: #f8f4ec; --bg-side: #f1ebdf; --bg-raised: #fffdf8; --bg-elev: #fffdf8; --bg-input: #fffdf8;
   --bg-hover: rgba(60,40,10,.05); --bg-active: rgba(60,40,10,.08);
   --line: rgba(60,40,10,.1); --line-2: rgba(60,40,10,.16);
   --tx: #2b241b; --tx-2: #554a3b; --tx-3: #6f6250;
-  --ac: #0f766e; --ac-hover: #0b5f58; --ac-tx: #0f6d66; --ac-soft: rgba(15,118,110,.12); --ok: #2b7330;
+  --ac: #0f766e; --ac-hover: #0b5f58; --ac-press: #094d47; --ac-tx: #0f6d66; --ac-soft: rgba(15,118,110,.12);
+  --ac-line: rgba(15,118,110,.4);
+  /* Paper is a light theme on its own class, so everything the dark base sets for a dark page is set again here. */
+  --bg-press: rgba(60,40,10,.12); --tx-off: #9a8d78;
+  --ok: #2b7330; --ok-soft: rgba(43,115,48,.1);
+  --warn: #8a5a00; --warn-soft: rgba(245,185,74,.18);
+  --bad: #b4232a; --bad-fill: #c4323a; --bad-press: #a8282f; --bad-soft: rgba(180,35,42,.08);
+  --info: #0b62b8; --info-soft: rgba(11,98,184,.08);
+  --agent-self: #0b7366; --agent-unknown: #9a4512;
+  --mark: rgba(245,185,74,.4);
+  --code: #f1ebdf; --syn-k: #6b3fd1; --syn-s: #18794e; --syn-f: #0b62b8; --syn-t: #b5470f;
+  --scrim: rgba(43,36,27,.3);
+  --lift: 0 12px 32px -18px rgba(60,40,10,.25);
+  --shadow: 0 18px 50px rgba(60,40,10,.12), 0 0 0 1px rgba(60,40,10,.08);
   color-scheme: light;
 }
 .app.hc {
   --bg: #000; --bg-side: #000; --bg-raised: #0a0a0a; --bg-elev: #0a0a0a;
   --bg-hover: rgba(255,255,255,.12); --bg-active: rgba(255,255,255,.18);
   --line: #5c5c5c; --line-2: #9a9a9a; --tx: #fff; --tx-2: #f0f0f0; --tx-3: #d4d4d4;
-  --ac: #ffd60a; --ac-hover: #ffe14d; --ac-tx: #ffd60a; --ac-soft: rgba(255,214,10,.2); --on-ac: #000;
+  --ac: #ffd60a; --ac-hover: #ffe14d; --ac-press: #e6c000; --ac-tx: #ffd60a; --ac-soft: rgba(255,214,10,.2); --on-ac: #000;
+  --ac-line: rgba(255,214,10,.6);
 }
 /* Accent choices on the default themes (Main board's accent lever). */
-.app.ac-blue { --ac: #2b62d9; --ac-hover: #3a70e3; --ac-tx: #8db4ff; --ac-soft: rgba(43,98,217,.16); }
+.app.ac-blue { --ac: #2b62d9; --ac-hover: #3a70e3; --ac-press: #1f4fb8; --ac-tx: #8db4ff; --ac-soft: rgba(43,98,217,.16); --ac-line: rgba(43,98,217,.45); }
 .app.light.ac-blue { --ac-tx: #1f55c4; --ac-soft: rgba(43,98,217,.1); }
-.app.ac-teal { --ac: #0f766e; --ac-hover: #13857c; --ac-tx: #5fd4c4; --ac-soft: rgba(15,118,110,.18); }
+.app.ac-teal { --ac: #0f766e; --ac-hover: #0d6b63; --ac-press: #0a5a53; --ac-tx: #5fd4c4; --ac-soft: rgba(15,118,110,.18); --ac-line: rgba(15,118,110,.45); }
 .app.light.ac-teal { --ac-tx: #0d6b63; --ac-soft: rgba(15,118,110,.1); }
