@@ -6,7 +6,7 @@ export const THEMES = [
   { id: 'light', label: 'Light', desc: 'Light surfaces, same accent.', cls: 'light', bg: '#ffffff', side: '#f4f4f5', bar: 'rgba(0,0,0,.12)', ac: '#6e56cf' },
   { id: 'system', label: 'System', desc: 'Follows your device.', cls: '', bg: 'linear-gradient(90deg, #ffffff 50%, #111114 50%)', side: '#e4e4e7', bar: 'rgba(120,120,130,.4)', ac: '#6e56cf' },
   { id: 'graphite', label: 'Graphite', desc: 'Neutral greys, calm blue.', cls: 'graphite', bg: '#121417', side: '#0d0f11', bar: 'rgba(255,255,255,.14)', ac: '#2563d0' },
-  { id: 'terminal', label: 'Terminal', desc: 'Phosphor green on black.', cls: 'terminal', bg: '#0a0f0b', side: '#070b08', bar: 'rgba(120,255,170,.2)', ac: '#22c55e' },
+  { id: 'terminal', label: 'Terminal', desc: 'Phosphor green on black.', cls: 'terminal', bg: '#0a0f0b', side: '#070b08', bar: 'rgba(120,255,170,.2)', ac: '#1a7d40' },
   { id: 'paper', label: 'Paper', desc: 'Warm paper, teal accent.', cls: 'paper', bg: '#f8f4ec', side: '#efe7d8', bar: 'rgba(60,40,10,.14)', ac: '#0f766e' },
   { id: 'hc', label: 'High contrast', desc: 'Black, white, bright focus.', cls: 'hc', bg: '#000000', side: '#000000', bar: '#ffffff', ac: '#ffd60a' },
   { id: 'custom', label: 'Custom', desc: 'Your own colors, kept readable.', cls: '', bg: '', side: '', bar: '', ac: '' },
@@ -55,7 +55,7 @@ export function customVars(p) {
   const target = p.contrast === 'high' ? 7 : 4.5;
   n = 0;
   while (ratio(text, ground) < target && n < 20) { text = mix(text, p.base === 'light' ? '#000000' : '#ffffff', 0.12); n++; }
-  const vars = { '--ac': fill, '--ac-hover': mix(fill, '#ffffff', 0.1), '--ac-press': mix(fill, '#000000', 0.12), '--ac-tx': text, '--ac-soft': `${p.custom}29`, '--ac-line': `${p.custom}73` };
+  const vars = { '--ac': fill, '--ac-hover': mix(fill, '#000000', 0.1), '--ac-press': mix(fill, '#000000', 0.2), '--ac-tx': text, '--ac-soft': `${p.custom}29`, '--ac-line': `${p.custom}73` };
   if (p.tint === 'accent') {
     Object.assign(vars, p.base === 'light'
       ? { '--bg': mix('#ffffff', p.custom, 0.03), '--bg-side': mix('#f7f7f8', p.custom, 0.06) }

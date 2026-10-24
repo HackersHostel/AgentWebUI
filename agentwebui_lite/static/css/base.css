@@ -72,7 +72,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .sw { width: 36px; height: 20px; border-radius: 999px; border: 0; padding: 2px; background: var(--line-2); cursor: pointer; display: flex; flex: none; }
 .sw span { width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3); }
 .sw.on { background: var(--ac); justify-content: flex-end; }
-.cb { width: 18px; height: 18px; padding: 0; border-radius: 5px; border: 1.5px solid var(--line-2); background: transparent; display: grid; place-items: center; cursor: pointer; color: #fff; flex: none; }
+.cb { width: 18px; height: 18px; padding: 0; border-radius: 5px; border: 1.5px solid var(--line-2); background: transparent; display: grid; place-items: center; cursor: pointer; color: var(--on-ac); flex: none; }
 .cb.on, .on > .cb { background: var(--ac); border-color: var(--ac); }
 .cb .i { width: 12px; height: 12px; stroke-width: 2.6; }
 .rd { width: 18px; height: 18px; padding: 0; border-radius: 50%; border: 1.5px solid var(--line-2); background: transparent; display: grid; place-items: center; cursor: pointer; flex: none; }
