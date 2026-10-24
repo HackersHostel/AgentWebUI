@@ -1,7 +1,10 @@
-# AgentWebUI Lite
+<img src="agentwebui_lite/static/logo.svg" width="56" alt="">
+
+# AgentWebUI
 
 One small web page to chat with AI models and with command-line agents, on your own server. Open it and chat:
-there is no setup screen and no accounts. Everything is configured in `.env`.
+there is no setup screen and no accounts. Everything is configured in `.env`. The package and command are still
+named `agentwebui-lite`.
 
 - **Models:** any OpenAI-compatible API (OpenAI, OpenRouter, NVIDIA, Groq, Ollama, LM Studio, vLLM, …).
 - **Agents:** anything that speaks the [Agent Client Protocol](https://agentclientprotocol.com) over stdio: Claude
@@ -39,8 +42,6 @@ cp .env.example .env        # then turn on a model provider or an agent
 ```
 
 Run the tests with `.venv/bin/pip install -e '.[dev]' && .venv/bin/pytest`.
-
-Or install the released package: `pip install agentwebui-lite` (that is how Atlas Agents' servers get it).
 
 ## Put it on a VPS
 
@@ -95,7 +96,8 @@ sandboxed, so an HTML or SVG file can't run as the page.
 ### Backups
 
 `agentwebui-lite backup [FILE]` writes a consistent copy of the database while the server runs (to
-`DATA_DIR/backups/` by default). The install script adds this cron line; add it yourself for other setups:
+`DATA_DIR/backups/` by default). The install script adds a daily cron job that keeps the 14 newest copies; for other
+setups, add this line yourself:
 
 ```
 17 3 * * * agentwebui cd /var/lib/agentwebui-lite && AWL_ENV_FILE=/etc/agentwebui-lite/.env /opt/agentwebui-lite/.venv/bin/agentwebui-lite backup
@@ -125,8 +127,10 @@ FILES_ROOTS=~/code,~/notes         # what Files shows and where agents may work
 - To show the page inside another site, such as your own dashboard: list that site in `FRAME_ANCESTORS`, set
   `EMBED_SECRET`, and have the site open the frame at a one-time `/embed?token=…` link it signs (the format is in
   `.env.example`). `LOCK_MODEL` and `LOCK_FOLDER` hide the model and folder choices when the site decides them.
+- `LOGIN_EMAIL` (with `PASSWORD`) makes sign-in ask for that email too, for a dashboard that hands out logins.
 - Models and agents come only from `.env`; the browser switches between them, hides models you don't use, and
-  remembers your defaults (Settings › Chat has "Reset to defaults").
+  remembers your defaults (Settings › Chat has "Reset to defaults"). `AGENT_<ID>_MODELS` limits an agent's model
+  menu to the models you list, in that order.
 
 ## What it does not do
 
@@ -137,7 +141,7 @@ terminal and no web search of its own. Agents bring their own tools, memory, MCP
 ## The client
 
 Built from the AgentWebUI redesign: [`docs/DESIGN.md`](docs/DESIGN.md) maps every board to what is built and where
-Lite departs from the boards.
+this build departs from the boards.
 
 | | |
 |---|---|
@@ -147,16 +151,10 @@ Lite departs from the boards.
 | `⌘P` | Go to file (in Files) |
 | `⌘\` | Collapse or expand the sidebar |
 | `↵` | Send, or allow the waiting request |
+| `⇧↵` | New line |
 | `/` | The agent's slash commands (agent chats) |
 | `Esc` | Stop the reply, or close the top layer |
 | `?` | All shortcuts |
-
-## Releases
-
-Bump `__version__` in `agentwebui_lite/__init__.py`, merge to `main`, then tag it: `git tag v0.1.1 && git push origin
-v0.1.1`. The Release workflow runs the tests, checks the tag matches the version, builds, and publishes to PyPI
-through trusted publishing (no token is stored). Atlas Agents pins the version it installs, so a release reaches
-agents only when the app's pin moves.
 
 ## License
 
