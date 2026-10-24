@@ -1,9 +1,9 @@
 # Start here
 
-You are working on AgentWebUI Lite. The task is written as a goal in [docs/GOAL.md](docs/GOAL.md). Read it first,
-then follow its "Before you write any code" steps: README.md, docs/PLAN.md, docs/DESIGN.md, docs/ROADMAP.md.
+You are working on AgentWebUI. Read [README.md](README.md) first: it covers what the app does, how to run it and how
+to configure it.
 
-Short version of the rules:
+Rules:
 
 - **Tiny:** no new dependency or service.
 - **No dead controls.**
