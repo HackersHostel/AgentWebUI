@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question
+    url: https://github.com/HackersHostel/AgentWebUI/discussions/categories/q-a
+    about: Help with setup, configuration or using an agent. Answers there help the next person too.
+  - name: Share an idea
+    url: https://github.com/HackersHostel/AgentWebUI/discussions/categories/ideas
+    about: Talk through an idea before it becomes a feature request.
+  - name: Report a security vulnerability
+    url: https://github.com/HackersHostel/AgentWebUI/security/advisories/new
+    about: Report it privately, never in a public issue. See SECURITY.md.

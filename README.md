@@ -2,6 +2,8 @@
 
 # AgentWebUI
 
+[![Tests](https://github.com/HackersHostel/AgentWebUI/actions/workflows/tests.yml/badge.svg)](https://github.com/HackersHostel/AgentWebUI/actions/workflows/tests.yml)
+
 One small web page to chat with AI models and with command-line agents, on your own server. Open it and chat:
 there is no setup screen and no accounts. Everything is configured in `.env`. The package and command are still
 named `agentwebui-lite`.
@@ -151,6 +153,15 @@ terminal and no web search of its own. Agents bring their own tools, memory, MCP
 | `/` | The agent's slash commands (agent chats) |
 | `Esc` | Stop the reply, or close the top layer |
 | `?` | All shortcuts |
+
+## Contributing
+
+Questions go to [Q&A](https://github.com/HackersHostel/AgentWebUI/discussions/categories/q-a), ideas to
+[Ideas](https://github.com/HackersHostel/AgentWebUI/discussions/categories/ideas), and bugs to
+[issues](https://github.com/HackersHostel/AgentWebUI/issues/new/choose). Before your first pull request, read
+[CONTRIBUTING.md](CONTRIBUTING.md): it covers setup, the rules that keep AgentWebUI small, and testing. Report security
+problems privately, as [SECURITY.md](SECURITY.md) describes. Everyone taking part follows the
+[Code of Conduct](CODE_OF_CONDUCT.md). What changed in each version is in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

@@ -1,0 +1,87 @@
+name: Feature request
+description: Suggest a concrete change or addition you'd like to see in AgentWebUI.
+title: "Feature: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        AgentWebUI stays small on purpose: one dependency, no build step, everything configured in `.env`. Requests that fit that shape are the easiest to accept.
+
+        Still shaping the idea? Start in [Ideas](https://github.com/HackersHostel/AgentWebUI/discussions/categories/ideas) and open an issue once it is concrete.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the [issues](https://github.com/HackersHostel/AgentWebUI/issues?q=is%3Aissue) and [Ideas](https://github.com/HackersHostel/AgentWebUI/discussions/categories/ideas) and this hasn't been proposed.
+          required: true
+        - label: I read [What it does not do](https://github.com/HackersHostel/AgentWebUI#what-it-does-not-do) in the README.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do, and what gets in the way today? Describe the need before the solution.
+      placeholder: I run three agents on a small VPS and can't tell which ones are still running and using memory.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you'd like to happen
+      description: How it should work from where you sit. Mockups, screenshots or example `.env` lines help.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+      description: Other approaches, workarounds you use today, or how other tools handle this.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - Model chats (OpenAI-compatible providers)
+        - Agent chats (ACP)
+        - Attachments and files in replies
+        - Pickers (choices blocks)
+        - Projects
+        - Files and Git
+        - Search, palette and shortcuts
+        - Voice
+        - Notifications and webhook
+        - Settings, themes and branding
+        - Sign-in, embed and managed mode
+        - Deployment (install script, Docker, backups)
+        - Something else
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: fit
+    attributes:
+      label: How it fits
+      description: Tick what is true. None of these are required, but they make a change much easier to accept.
+      options:
+        - label: It needs no new Python dependency, service or build step.
+        - label: Any new setting can live in `.env` (and be documented in `.env.example`).
+        - label: It works on a phone as well as a desktop.
+
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Would you like to build it?
+      options:
+        - Yes, I'd like to open a pull request
+        - Maybe, with some guidance
+        - "No"
+    validations:
+      required: true

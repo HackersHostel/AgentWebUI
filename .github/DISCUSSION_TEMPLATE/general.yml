@@ -1,0 +1,12 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Anything about AgentWebUI that isn't a question, an idea or a showcase. For help, [Q&A](https://github.com/HackersHostel/AgentWebUI/discussions/categories/q-a) gets you an answer that others can find later.
+
+  - type: textarea
+    id: body
+    attributes:
+      label: What's on your mind?
+    validations:
+      required: true
