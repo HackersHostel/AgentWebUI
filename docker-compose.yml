@@ -1,7 +1,9 @@
-# AgentWebUI Lite behind Caddy (HTTPS). Put PASSWORD, providers and agents in .env next to this file, set DOMAIN,
+# AgentWebUI behind Caddy (HTTPS). Put PASSWORD, providers and agents in .env next to this file, set DOMAIN,
 # then: docker compose up -d. Sign agents in once: docker compose exec app claude  (and: codex login --device-auth)
+# It pulls the published image (AGENTWEBUI_TAG picks the tag, e.g. slim or edge); --build builds this checkout.
 services:
   app:
+    image: ghcr.io/hackershostel/agentwebui:${AGENTWEBUI_TAG:-latest}
     build: .
     restart: unless-stopped
     env_file: .env

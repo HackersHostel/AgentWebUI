@@ -78,15 +78,39 @@ Change settings in `/etc/agentwebui-lite/.env`, then `sudo systemctl restart age
 
 ### Docker
 
+The image is published as `ghcr.io/hackershostel/agentwebui`, for amd64 and arm64:
+
+| Tag | What's in it |
+|---|---|
+| `latest`, `X.Y.Z`, `X.Y` | The newest release (or that one), with Claude Code and Codex |
+| `slim`, `X.Y.Z-slim`, `X.Y-slim` | The same without agents or Node.js: model providers only, and much smaller |
+| `edge`, `edge-slim` | The newest `main`, rebuilt on every merge |
+
+With Caddy in front for HTTPS, using the compose file in this repository:
+
 ```bash
 cp .env.example .env    # set PASSWORD and your providers; agents are already installed in the image
-DOMAIN=chat.example.com docker compose up -d --build
+mkdir -p work
+DOMAIN=chat.example.com docker compose up -d   # pulls the image; add --build to build this checkout instead
 docker compose exec app claude                  # sign Claude Code in once
 docker compose exec app codex login --device-auth
 ```
 
-Data lives in the `data` volume, the agents' sign-ins in `home`, and your projects in `./work`. The image is large
-(about 2.8 GB) because Claude Code and Codex come with it; build with `--build-arg AGENTS=` to leave them out.
+Set `AGENTWEBUI_TAG=slim` (or a version, or `edge`) to run another tag. Update with `docker compose pull && docker
+compose up -d`. Data lives in the `data` volume, the agents' sign-ins in `home`, and your projects in `./work`.
+
+To try it on your own computer without Caddy:
+
+```bash
+cp .env.example .env && mkdir -p work   # set PASSWORD: the container listens on all of its addresses
+docker run -d --name agentwebui -p 127.0.0.1:3000:3000 -v "$PWD/.env:/app/.env:ro" \
+  -v agentwebui-data:/data -v agentwebui-home:/home/agentwebui -v "$PWD/work:/work" \
+  ghcr.io/hackershostel/agentwebui              # then open http://127.0.0.1:3000
+docker exec -it agentwebui claude               # sign Claude Code in once
+```
+
+The image sets `HOST`, `PORT`, `DATA_DIR`, `WORKSPACE_DIR` and `FILES_ROOTS` for the container, and those win over the
+same lines in the mounted `.env`. Set `TRUST_PROXY=true` only when a proxy sits in front, as the compose file does.
 
 ### Keep it safe
 

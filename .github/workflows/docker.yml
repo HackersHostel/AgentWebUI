@@ -1,0 +1,81 @@
+# Build the Docker image and publish it to GitHub's registry as ghcr.io/hackershostel/agentwebui, for amd64 and
+# arm64. A version tag (`git tag v0.3.0 && git push origin v0.3.0`, matching agentwebui_lite.__version__) publishes
+# 0.3.0, 0.3 and latest; every push to main publishes edge. Each comes again with -slim (slim for latest): the image
+# without Claude Code, Codex and Node.js. A pull request that touches the image only builds it, for amd64.
+name: Docker
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    paths: [Dockerfile, .dockerignore, pyproject.toml, .github/workflows/docker.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - agents: claude,codex
+            suffix: ""
+            latest: latest
+          - agents: ""
+            suffix: -slim
+            latest: slim
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the tag matches the version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(python3 -c 'import agentwebui_lite; print(agentwebui_lite.__version__)')
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match version $version" >&2
+            exit 1
+          fi
+
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/hackershostel/agentwebui
+          flavor: latest=false
+          tags: |
+            type=semver,pattern={{version}},suffix=${{ matrix.suffix }}
+            type=semver,pattern={{major}}.{{minor}},suffix=${{ matrix.suffix }}
+            type=raw,value=${{ matrix.latest }},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=edge,branch=main,suffix=${{ matrix.suffix }}
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          build-args: AGENTS=${{ matrix.agents }}
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          push: ${{ github.event_name != 'pull_request' && steps.meta.outputs.tags != '' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          cache-from: type=gha,scope=image${{ matrix.suffix }}
+          cache-to: type=gha,mode=max,scope=image${{ matrix.suffix }}
