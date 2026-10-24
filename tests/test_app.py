@@ -264,10 +264,15 @@ async def test_an_agent_mode_can_be_changed(settings_for, client_for, monkeypatc
 async def test_config_describes_providers_agents_and_the_user(tmp_path, client_for, fake_openai):
     from .conftest import make_settings
     client = await client_for(make_settings(tmp_path, fake_openai=fake_openai, user_name="Labib"))
+    from agentwebui_lite.server import PROVIDERS
+    await client.server.app[PROVIDERS].locality.check_all()
     body = await (await client.get("/api/config")).json()
     assert body["user_name"] == "Labib"
-    assert body["providers"][0]["local"] and body["providers"][0]["models"] == 2
-    assert all(m["local"] for m in body["models"])
+    provider = body["providers"][0]
+    assert provider["models"] == 2 and provider["endpoint"] == "machine" and provider["checking"] is False
+    # On this machine, but a plain OpenAI-compatible server, not a known local engine (#16): not local.
+    assert not provider["local"] and provider["why"].startswith("Not local: no known local engine answered")
+    assert not any(m["local"] for m in body["models"])
     assert body["agents"][0]["running"] is False
 
 

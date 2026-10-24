@@ -5,7 +5,22 @@ import { logoUrl } from './brand.js';
 export async function loadConfig() {
   const config = await api('/api/config');
   store.set({ config });
+  followChecks(config);
   return config;
+}
+
+// Where each provider runs is checked in the background (#16): read the config again until no provider is checking.
+let following = 0;
+export function followChecks(config, tries = 0) {
+  clearTimeout(following);
+  if (tries >= 20 || !config?.providers?.some((p) => p.checking)) return;
+  following = setTimeout(async () => {
+    try {
+      const next = await api('/api/config');
+      store.set({ config: next });
+      followChecks(next, tries + 1);
+    } catch { /* the next loadConfig() tries again */ }
+  }, 1000);
 }
 
 export async function loadChats() {

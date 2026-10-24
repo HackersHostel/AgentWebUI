@@ -1,7 +1,6 @@
 """Any OpenAI-compatible chat completions API: OpenAI, OpenRouter, Ollama, LM Studio, vLLM, Groq, and others."""
 from __future__ import annotations
 
-import ipaddress
 import json
 import logging
 import time
@@ -12,6 +11,7 @@ from urllib.parse import urlsplit
 import aiohttp
 
 from .config import Provider
+from .locality import Locality
 
 log = logging.getLogger("agentwebui_lite")
 MODELS_TTL = 300
@@ -25,11 +25,13 @@ class Providers:
     def __init__(self, providers: tuple[Provider, ...], http: aiohttp.ClientSession) -> None:
         self.providers = {p.id: p for p in providers}
         self.http = http
+        self.locality = Locality(providers, http)
         self._models: dict[str, tuple[float, list[str], str]] = {}
 
     def forget(self) -> None:
-        """Ask every provider for its models again on the next look."""
+        """Ask every provider for its models again on the next look, and check again where each one is."""
         self._models.clear()
+        self.locality.recheck()
 
     def _headers(self, provider: Provider) -> dict[str, str]:
         return {"Authorization": f"Bearer {provider.key}"} if provider.key else {}
@@ -39,10 +41,11 @@ class Providers:
         out = []
         for provider in self.providers.values():
             names, _ = await self._models_of(provider)
-            local = is_local(provider.url)
+            place = self.locality.get(provider.id)
             for name in names:
+                local, why = place.model_local(name)
                 out.append({"id": f"{provider.id}/{name}", "provider": provider.id,
-                            "provider_name": provider.name, "model": name, "local": local})
+                            "provider_name": provider.name, "model": name, "local": local, "why": why})
         return out
 
     async def summary(self) -> list[dict[str, Any]]:
@@ -52,9 +55,12 @@ class Providers:
             names, error = await self._fetch(provider)
             if provider.models:
                 names = list(provider.models)
+            place = self.locality.get(provider.id)
             out.append({"id": provider.id, "name": provider.name, "host": urlsplit(provider.url).netloc,
-                        "url": provider.url, "local": is_local(provider.url), "has_key": bool(provider.key),
-                        "listed": bool(provider.models), "models": len(names), "error": error})
+                        "url": provider.url, "local": place.local, "endpoint": place.endpoint,
+                        "engine": place.engine, "why": place.why, "checking": place.checking,
+                        "has_key": bool(provider.key), "listed": bool(provider.models), "models": len(names),
+                        "error": error})
         return out
 
     async def _models_of(self, provider: Provider) -> tuple[list[str], str]:
@@ -124,17 +130,6 @@ class Providers:
                         yield "usage", chunk["usage"]
         except (aiohttp.ClientError, TimeoutError) as exc:
             raise ProviderError(f"{provider.name} could not be reached ({type(exc).__name__})") from None
-
-
-def is_local(url: str) -> bool:
-    host = (urlsplit(url).hostname or "").lower()
-    if host in ("localhost", "host.docker.internal") or host.endswith(".local"):
-        return True
-    try:
-        address = ipaddress.ip_address(host)
-    except ValueError:
-        return False
-    return address.is_loopback or address.is_private
 
 
 def _error_text(text: str) -> str:
