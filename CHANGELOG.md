@@ -25,8 +25,12 @@ change settings or behavior, and its entry says how.
 - The new AgentWebUI logo, in the ink of each theme and accent. The installed app gets 192, 512 and maskable icons.
   `BRAND_LOGO` still replaces it everywhere.
 - The model picker lists connected agents first, has a Models tab with every model and no agents, and shows only the
-  tabs that can have something in them. On this machine lists only the models of local providers, instead of every
-  agent, and says how to add a local model server when there is none.
+  tabs that can have something in them.
+- The picker's On this machine tab is now Local models, and lists a provider's models only when its address leads to
+  this server or a network it is on and a known local engine answers there (Ollama, LM Studio, vLLM, llama.cpp's
+  server). Ollama cloud models and gateways such as LiteLLM on localhost no longer count. The picker and
+  Settings › Providers say why each one counts or not, and the new `PROVIDER_<ID>_LOCAL=true|false` overrides the
+  check. With no local provider, the tab says how to add one.
 
 ### Fixed
 
