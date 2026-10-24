@@ -135,13 +135,9 @@ FILES_ROOTS=~/code,~/notes         # what Files shows and where agents may work
 ## What it does not do
 
 No accounts, roles or sign-up, no RAG or memory, no prompt library, no workflows, no MCP management, no sandbox, no
-terminal and no web search of its own. Agents bring their own tools, memory, MCP servers and web search. See
-[`docs/PLAN.md`](docs/PLAN.md).
+terminal and no web search of its own. Agents bring their own tools, memory, MCP servers and web search.
 
-## The client
-
-Built from the AgentWebUI redesign: [`docs/DESIGN.md`](docs/DESIGN.md) maps every board to what is built and where
-this build departs from the boards.
+## Keyboard shortcuts
 
 | | |
 |---|---|
