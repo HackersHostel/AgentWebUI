@@ -20,8 +20,9 @@ function entries(config, hidden = {}) {
       badge: 'Agent', logo: AGENT_GRADIENT, mark: agentLogo(a), cwd: a.cwd, models,
       desc: `An external agent. It works in a folder on this computer (${basename(a.cwd)} by default) and asks before changing files.` });
   }
-  const groups = [...providers.values()].map((p) => ({ id: p.id, name: p.name, sub: `OpenAI-compatible · ${p.host}`, color: p.color, where: p.local ? 'This network' : `${p.name}, through your key` }));
-  groups.push({ id: '__agents', name: 'External agents', sub: 'In a folder', color: '#f5b94a', where: 'Your computer' });
+  // The connected agents come first, above every provider's models.
+  const groups = [{ id: '__agents', name: 'Connected Agents', sub: 'In a folder', color: '#f5b94a', where: 'Your computer' },
+    ...[...providers.values()].map((p) => ({ id: p.id, name: p.name, sub: `OpenAI-compatible · ${p.host}`, color: p.color, where: p.local ? 'This network' : `${p.name}, through your key` }))];
   return { items, groups };
 }
 
@@ -64,7 +65,7 @@ export function ModelPicker({ value, onPick, chat, tab: initialTab, onClose }) {
     if (e.key === 'ArrowUp') { e.preventDefault(); setHot(flat[Math.max(i - 1, 0)]?.value); }
     if (e.key === 'Enter') { e.preventDefault(); use(hotItem, e.metaKey || e.ctrlKey); }
   };
-  const tabs = [['all', 'All'], ['fav', 'Favorites'], ['local', 'On this machine'], ['agents', 'Agents']];
+  const tabs = [['all', 'All'], ['agents', 'Connected Agents'], ['local', 'On this machine'], ['fav', 'Favorites']];
   const hotGroup = groups.find((g) => g.id === hotItem?.group);
   return html`<${Dialog} onClose=${onClose} label="Choose a model" width=${720} top=${96} class="picker">
     <div class="picker-list" onKeyDown=${onKey}>
