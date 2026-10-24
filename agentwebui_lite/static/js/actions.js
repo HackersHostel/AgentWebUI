@@ -1,5 +1,6 @@
 // Everything the screens do: load, send, stream, stop, answer, retry, switch, and move between screens.
 import { api, readEvents, store, local, navigate, toast, ApiError, readBase64, saveFile } from './lib.js';
+import { logoUrl } from './brand.js';
 
 export async function loadConfig() {
   const config = await api('/api/config');
@@ -439,7 +440,7 @@ export function toggleInspector(tab) {
 function notify(title, body, id) {
   if (!document.hidden || !('Notification' in window) || Notification.permission !== 'granted') return;
   try {
-    const n = new Notification(title, { body, tag: id, icon: '/brand/logo' });
+    const n = new Notification(title, { body, tag: id, icon: logoUrl(store.get().prefs) });
     n.onclick = () => { window.focus(); navigate(`#/c/${id}`); n.close(); };
   } catch { /* not shown */ }
 }

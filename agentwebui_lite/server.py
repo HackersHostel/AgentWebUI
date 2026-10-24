@@ -296,10 +296,13 @@ def _chat_or_404(request: web.Request) -> dict[str, Any]:
 
 
 async def index(request: web.Request) -> web.Response:
-    """The page, with the brand name in its title and the theme color set before the first paint."""
+    """The page, with the brand name in its title and the theme color set before the first paint. With BRAND_LOGO set,
+    the page is marked so the client shows that logo instead of the one in each theme's ink."""
     settings = request.app[SETTINGS]
     page = (STATIC / "index.html").read_text(encoding="utf-8")
     page = page.replace("<title>AgentWebUI Lite</title>", f"<title>{_html(settings.brand_name)}</title>")
+    if settings.brand_logo:
+        page = page.replace('<html lang="en" class="app">', '<html lang="en" class="app" data-own-logo>')
     page = page.replace('"/assets/', f'"/assets/{request.app[ASSETS]}/')
     return web.Response(text=page, content_type="text/html", headers={"Cache-Control": "no-cache"})
 
@@ -311,11 +314,14 @@ def _html(text: str) -> str:
 async def manifest(request: web.Request) -> web.Response:
     """Lets a phone or desktop install the VPS address as an app, under the brand's name and logo."""
     settings = request.app[SETTINGS]
-    logo = "/brand/logo"
+    icons = [{"src": "/brand/logo", "sizes": "any", "type": _logo_type(settings)}] if settings.brand_logo else [
+        {"src": "/assets/brand/icon-192.png", "sizes": "192x192", "type": "image/png"},
+        {"src": "/assets/brand/icon-512.png", "sizes": "512x512", "type": "image/png"},
+        {"src": "/assets/brand/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+        {"src": "/brand/logo", "sizes": "any", "type": "image/svg+xml"}]
     return web.json_response({
         "name": settings.brand_name, "short_name": settings.brand_name[:12], "start_url": "/", "display": "standalone",
-        "background_color": "#111114", "theme_color": "#111114",
-        "icons": [{"src": logo, "sizes": "any", "type": _logo_type(settings)}]},
+        "background_color": "#111114", "theme_color": "#111114", "icons": icons},
         content_type="application/manifest+json")
 
 
