@@ -189,4 +189,4 @@ problems privately, as [SECURITY.md](SECURITY.md) describes. Everyone taking par
 
 ## License
 
-MIT. Copyright (c) 2026 HackersHostel. See [LICENSE](LICENSE).
+MIT. Copyright (c) 2026 HackersHostel. See the [LICENSE](LICENSE).
