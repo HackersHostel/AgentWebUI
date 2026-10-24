@@ -742,9 +742,27 @@ async def test_the_brand_names_the_page_and_the_installable_app(settings_for, cl
     client = await client_for(settings_for(brand_name="Hostel AI"))
     assert "<title>Hostel AI</title>" in await (await client.get("/")).text()
     manifest = await (await client.get("/manifest.webmanifest")).json()
-    assert manifest["name"] == "Hostel AI" and manifest["icons"][0]["src"] == "/brand/logo"
+    assert manifest["name"] == "Hostel AI"
     assert (await client.get("/brand/logo")).status == 200
     assert (await (await client.get("/api/config")).json())["brand"]["name"] == "Hostel AI"
+
+
+async def test_the_installable_app_has_the_logo_in_every_size_it_needs(settings_for, client_for):
+    client = await client_for(settings_for(password="secret"))
+    icons = (await (await client.get("/manifest.webmanifest")).json())["icons"]
+    assert {(i["sizes"], i.get("purpose", "any")) for i in icons} >= {("192x192", "any"), ("512x512", "any"), ("512x512", "maskable")}
+    for icon in icons:  # open before sign-in, like the sign-in page's own logo
+        assert (await client.get(icon["src"])).status == 200
+    assert "data-own-logo" not in await (await client.get("/")).text()
+
+
+async def test_a_brand_logo_replaces_the_logo_of_every_theme(settings_for, client_for, tmp_path):
+    logo = tmp_path / "hostel.png"
+    logo.write_bytes(b"\x89PNG\r\n\x1a\n")
+    client = await client_for(settings_for(brand_logo=str(logo)))
+    assert '<html lang="en" class="app" data-own-logo>' in await (await client.get("/")).text()
+    assert (await (await client.get("/manifest.webmanifest")).json())["icons"] == [{"src": "/brand/logo", "sizes": "any", "type": "image/png"}]
+    assert await (await client.get("/brand/logo")).read() == b"\x89PNG\r\n\x1a\n"
 
 
 async def test_the_browser_checks_client_files_after_an_update(settings_for, client_for):

@@ -3,6 +3,7 @@
 import { html, useState, useRef, useEffect, store, useStore, cx, dayGroup, navigate, mod, api, toast, local } from './lib.js';
 import { Icon } from './icons.js';
 import { Logo, targetLogo } from './logos.js';
+import { BrandLogo } from './brand.js';
 import { Menu, MenuItem, MenuSep, confirm, useToggle } from './ui.js';
 import { renameChat, deleteChat, openPalette, openPicker, toggleSidebar, newChat, pinChat, archiveChat, cloneChat, exportChat } from './actions.js';
 import { startInProject } from './projects.js';
@@ -32,7 +33,7 @@ export function Sidebar({ drawer = false }) {
   const row = (chat) => html`<${ChatRow} key=${chat.id} chat=${chat} on=${chat.id === current} live=${live[chat.id]} go=${() => go(`#/c/${chat.id}`)} />`;
   return html`<aside class=${cx('side', drawer && 'drawer')} aria-label=${drawer ? 'Menu' : 'Sidebar'}>
     <div class="side-head">
-      <img src=${brand.logo || '/brand/logo'} alt="" width="22" height="22" style="border-radius: 7px" />
+      <${BrandLogo} size=${22} />
       <span class="brand">${brand.name || 'AgentWebUI'}</span>
       ${drawer
         ? html`<button class="ib" aria-label="Close menu" onClick=${close}><${Icon} name="close" /></button>`
@@ -168,7 +169,7 @@ function Account() {
 export function Rail() {
   const { route, config } = useStore((s) => ({ route: s.route, config: s.config }));
   return html`<nav class="rail" aria-label="Sidebar (collapsed)">
-    <img src=${config?.brand?.logo || '/brand/logo'} alt=${config?.brand?.name || 'AgentWebUI'} width="22" height="22" style="border-radius: 7px; margin: 9px 0 10px" />
+    <${BrandLogo} size=${22} alt=${config?.brand?.name || 'AgentWebUI'} style="margin: 9px 0 10px" />
     <button class="ib" aria-label="Expand sidebar" title=${`Expand sidebar  ${mod}\\`} onClick=${toggleSidebar}><${Icon} name="panel" /></button>
     <button class=${cx('ib', route.name === 'home' && 'on')} aria-label="New chat" title=${`New chat  ${mod}N`} onClick=${() => newChat()}><${Icon} name="new-chat" /></button>
     <button class="ib" aria-label="Search" title=${`Search  ${mod}K`} onClick=${openPalette}><${Icon} name="search" /></button>

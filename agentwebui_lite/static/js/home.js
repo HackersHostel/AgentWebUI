@@ -2,6 +2,7 @@
 import { html, useState, useEffect, store, useStore, greeting, ago, navigate, basename, cx, local } from './lib.js';
 import { Icon } from './icons.js';
 import { Logo, targetLogo } from './logos.js';
+import { BrandLogo } from './brand.js';
 import { Composer, startingConfig } from './composer.js';
 import { defaultTarget, describeTarget, openPalette } from './actions.js';
 
@@ -62,7 +63,7 @@ export function Home() {
           ${temporary
             ? html`<span class="ico" style="width: 40px; height: 40px; border-radius: 12px"><${Icon} name="temporary" size=${20} /></span>
               <h1>Temporary chat</h1><p>Not saved, not in your history, and gone when you leave it. Agents still change files they’re allowed to.</p>`
-            : html`<img src=${brand.logo || '/brand/logo'} alt="" width="40" height="40" style="border-radius: 12px" />
+            : html`<${BrandLogo} size=${40} />
               <h1>${brand.greeting || `${greeting()}${name ? `, ${name}` : ''}`}</h1>
               <p>${nothing ? 'Connect a model or an agent in .env to start.' : 'Ask anything, or hand a task to an agent.'}</p>`}
         </div>
