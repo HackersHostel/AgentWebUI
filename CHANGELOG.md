@@ -6,6 +6,8 @@ change settings or behavior, and its entry says how.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-25
+
 ### Added
 
 - Contributor guide, Code of Conduct, security policy and support page; issue forms for bugs, features,
@@ -22,7 +24,9 @@ change settings or behavior, and its entry says how.
   called AgentWebUI; the package, command and install paths keep the name `agentwebui-lite`.
 - The new AgentWebUI logo, in the ink of each theme and accent. The installed app gets 192, 512 and maskable icons.
   `BRAND_LOGO` still replaces it everywhere.
-- The model picker lists connected agents first, and its tabs read All, Connected Agents, On this machine, Favorites.
+- The model picker lists connected agents first, has a Models tab with every model and no agents, and shows only the
+  tabs that can have something in them. On this machine lists only the models of local providers, instead of every
+  agent, and says how to add a local model server when there is none.
 
 ### Fixed
 
@@ -60,6 +64,7 @@ The first release.
   `EMBED_SECRET`, `LOCK_MODEL` and `LOCK_FOLDER`.
 - A VPS install script with systemd and Caddy, a Docker image and compose file, and `agentwebui-lite backup`.
 
-[Unreleased]: https://github.com/HackersHostel/AgentWebUI/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/HackersHostel/AgentWebUI/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/HackersHostel/AgentWebUI/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/HackersHostel/AgentWebUI/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/HackersHostel/AgentWebUI/releases/tag/v0.1.0
