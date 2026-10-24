@@ -51,7 +51,7 @@ Two ways; both end with the app behind Caddy on HTTPS. Point a DNS name at the s
 On a fresh Ubuntu 22.04+ or Debian 12+ server:
 
 ```bash
-git clone https://github.com/HackersHostel/AgentWebUI-Lite.git && cd AgentWebUI-Lite
+git clone https://github.com/HackersHostel/AgentWebUI.git && cd AgentWebUI
 sudo DOMAIN=chat.example.com ./deploy/install.sh
 ```
 

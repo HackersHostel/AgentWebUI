@@ -18,7 +18,7 @@ dependencies = ["aiohttp>=3.9,<4"]
 dev = ["pytest>=8", "pytest-aiohttp>=1.0"]
 
 [project.urls]
-Source = "https://github.com/HackersHostel/AgentWebUI-Lite"
+Source = "https://github.com/HackersHostel/AgentWebUI"
 
 [project.scripts]
 agentwebui-lite = "agentwebui_lite.__main__:main"
