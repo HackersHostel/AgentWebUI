@@ -122,7 +122,9 @@ There's an [`.editorconfig`](.editorconfig) so most editors pick up the indentat
 ## Releases
 
 Maintainers bump `__version__` in `agentwebui_lite/__init__.py`, move the *Unreleased* changelog entries under the new
-version, and tag the merge commit `vX.Y.Z`.
+version, and tag the merge commit `vX.Y.Z`. The tag publishes the Docker images `X.Y.Z`, `X.Y` and `latest` (and their
+`-slim` twins) through the Docker workflow, which refuses a tag that doesn't match `__version__`. Every merge to
+`main` publishes `edge`.
 
 ## License
 

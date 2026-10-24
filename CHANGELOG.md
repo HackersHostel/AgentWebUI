@@ -11,9 +11,13 @@ change settings or behavior, and its entry says how.
 - Contributor guide, Code of Conduct, security policy and support page; issue forms for bugs, features,
   agent or provider compatibility and docs; Discussions forms for Q&A, Ideas, Show and tell and General; a pull
   request template; and tests on Python 3.11 to 3.14 for every pull request.
+- A published Docker image, `ghcr.io/hackershostel/agentwebui`, for amd64 and arm64: `latest` and each release with
+  Claude Code and Codex, `slim` without agents, and `edge` from `main`. `docker compose up -d` now pulls it.
 
 ### Changed
 
+- The Docker image no longer turns on `TRUST_PROXY` by itself; the compose file still does, for Caddy. Run on its
+  own, the container could otherwise be told any client address and so get around the sign-in limit.
 - AgentWebUI is released under the MIT license, copyright HackersHostel. It was proprietary. The project is now
   called AgentWebUI; the package, command and install paths keep the name `agentwebui-lite`.
 - The new AgentWebUI logo, in the ink of each theme and accent. The installed app gets 192, 512 and maskable icons.

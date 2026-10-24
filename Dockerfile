@@ -1,4 +1,5 @@
-# AgentWebUI Lite with Claude Code and Codex. See README › Docker.
+# AgentWebUI with Claude Code and Codex. See README › Docker. Published as ghcr.io/hackershostel/agentwebui;
+# the -slim tags are built with AGENTS= and have no agents (or Node.js), only model providers.
 FROM python:3.12-slim
 
 ARG AGENTS="claude,codex"
@@ -18,7 +19,9 @@ COPY agentwebui_lite ./agentwebui_lite
 RUN pip install --no-cache-dir .
 
 USER agentwebui
-ENV HOST=0.0.0.0 PORT=3000 DATA_DIR=/data WORKSPACE_DIR=/work FILES_ROOTS=/work TRUST_PROXY=true AWL_ENV_FILE=/app/.env
+# TRUST_PROXY stays off: with it on and no proxy in front, a client could claim any address and dodge the sign-in
+# limit. docker-compose.yml turns it on for Caddy.
+ENV HOST=0.0.0.0 PORT=3000 DATA_DIR=/data WORKSPACE_DIR=/work FILES_ROOTS=/work AWL_ENV_FILE=/app/.env
 EXPOSE 3000
 VOLUME ["/data", "/work", "/home/agentwebui"]
 HEALTHCHECK --interval=30s --timeout=5s CMD curl -fsS http://127.0.0.1:3000/api/health || exit 1
