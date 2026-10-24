@@ -5,6 +5,8 @@ import { Logo, agentLogo, modelLogo, providerLogo } from './logos.js';
 import { Dialog } from './ui.js';
 import { newChat } from './actions.js';
 
+// `local` lists the models of providers the server marks as local (providers.is_local: this machine or its network).
+const TABS = [['all', 'All'], ['agents', 'Connected Agents'], ['models', 'Models'], ['local', 'On this machine'], ['fav', 'Favorites']];
 const DOT = ['#3a8ee6', '#3dd68c', '#b3a4ff', '#ffb38a', '#5fd4c4', '#f783ac'];
 
 function entries(config, hidden = {}) {
@@ -16,7 +18,7 @@ function entries(config, hidden = {}) {
   }));
   for (const a of config.agents) {
     const models = !config.lock_model && a.options && a.options.filter((o) => o.category === 'model').flatMap((o) => (o.options || []).flatMap((x) => x.options || [x]));
-    items.push({ value: `agent:${a.id}`, name: a.name, raw: a.command, group: '__agents', local: true, kind: 'agent',
+    items.push({ value: `agent:${a.id}`, name: a.name, raw: a.command, group: '__agents', local: false, kind: 'agent',
       badge: 'Agent', logo: AGENT_GRADIENT, mark: agentLogo(a), cwd: a.cwd, models,
       desc: `An external agent. It works in a folder on this computer (${basename(a.cwd)} by default) and asks before changing files.` });
   }
@@ -30,16 +32,19 @@ export function ModelPicker({ value, onPick, chat, tab: initialTab, onClose }) {
   const config = useStore((s) => s.config);
   const hidden = useStore((s) => s.chatPrefs?.hiddenModels || {});
   const [q, setQ] = useState('');
-  const [tab, setTab] = useState(initialTab || 'all');
+  const lockKind = chat ? chat.kind : null;
+  const tabs = TABS.filter(([id]) => !(lockKind === 'agent' && (id === 'models' || id === 'local' || id === 'fav'))
+    && !(lockKind === 'model' && id === 'agents'));
+  const [tab, setTab] = useState(tabs.some(([id]) => id === initialTab) ? initialTab : 'all');
   const [favs, setFavs] = useState(() => local.get('favorites', {}));
   const { items, groups } = useMemo(() => entries(config, hidden), [config, hidden]);
-  const lockKind = chat ? chat.kind : null;
   const needle = q.trim().toLowerCase();
   const visible = items.filter((m) => {
     if (lockKind && m.kind !== lockKind) return false;
     if (tab === 'fav' && !favs[m.value]) return false;
-    if (tab === 'local' && !m.local) return false;
     if (tab === 'agents' && m.kind !== 'agent') return false;
+    if (tab === 'models' && m.kind !== 'model') return false;
+    if (tab === 'local' && !(m.kind === 'model' && m.local)) return false;
     if (!needle) return true;
     const g = groups.find((x) => x.id === m.group);
     return `${m.name} ${m.raw} ${g?.name} ${m.badge}`.toLowerCase().includes(needle);
@@ -65,7 +70,6 @@ export function ModelPicker({ value, onPick, chat, tab: initialTab, onClose }) {
     if (e.key === 'ArrowUp') { e.preventDefault(); setHot(flat[Math.max(i - 1, 0)]?.value); }
     if (e.key === 'Enter') { e.preventDefault(); use(hotItem, e.metaKey || e.ctrlKey); }
   };
-  const tabs = [['all', 'All'], ['agents', 'Connected Agents'], ['local', 'On this machine'], ['fav', 'Favorites']];
   const hotGroup = groups.find((g) => g.id === hotItem?.group);
   return html`<${Dialog} onClose=${onClose} label="Choose a model" width=${720} top=${96} class="picker">
     <div class="picker-list" onKeyDown=${onKey}>
@@ -75,7 +79,7 @@ export function ModelPicker({ value, onPick, chat, tab: initialTab, onClose }) {
         <input id="mq" class="bare" value=${q} onInput=${(e) => setQ(e.target.value)} placeholder="Search models, providers, agents" autocomplete="off" data-autofocus />
         <span class="kbd">Esc</span>
       </div>
-      <div role="tablist" class="picker-tabs">${tabs.filter(([id]) => !(lockKind === 'agent' && (id === 'local' || id === 'fav'))).map(([id, label]) => html`<button key=${id} class="tab" role="tab"
+      <div role="tablist" class="picker-tabs">${tabs.map(([id, label]) => html`<button key=${id} class="tab" role="tab"
         aria-selected=${tab === id} style=${tab === id ? 'background: var(--bg-active); color: var(--tx)' : ''} onClick=${() => setTab(id)}>${label}</button>`)}</div>
       <div class="picker-rows" ref=${list} role="listbox" aria-label="Models">
         ${shown.map((g) => html`<div key=${g.id}>
@@ -87,7 +91,9 @@ export function ModelPicker({ value, onPick, chat, tab: initialTab, onClose }) {
             <span class="row-check">${m.value === value && html`<${Icon} name="check" />`}</span>
           </button>`)}
         </div>`)}
-        ${flat.length === 0 && html`<div class="picker-empty">${needle ? html`No model matches “${q}”.` : tab === 'fav' ? 'No favorites yet. Star a model to keep it here.' : 'Nothing here yet.'}<br />
+        ${flat.length === 0 && html`<div class="picker-empty">${needle ? html`No model matches “${q}”.` : tab === 'fav' ? 'No favorites yet. Star a model to keep it here.'
+          : tab === 'local' ? html`No models run on this machine yet. Add Ollama or LM Studio in .env:<br /><span class="mono">PROVIDER_OLLAMA_URL=http://127.0.0.1:11434/v1</span>`
+          : 'Nothing here yet.'}<br />
           <a href="#/settings/providers" onClick=${(e) => { e.preventDefault(); onClose(); navigate('#/settings/providers'); }} style="color: var(--ac-tx)">Connect another provider</a></div>`}
       </div>
       <div class="picker-foot">
