@@ -1,0 +1,90 @@
+name: Agent or provider compatibility
+description: An ACP agent or an OpenAI-compatible API doesn't start, connect, stream or show its models correctly.
+title: "Compatibility: "
+labels: ["compatibility", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        AgentWebUI talks to agents over the [Agent Client Protocol](https://agentclientprotocol.com) on stdio, and to models through any OpenAI-compatible `/models` and `/chat/completions` API. Use this form when one of them doesn't work as it should.
+
+        First check that the agent works in a terminal on the same machine, as the same user, and that it is signed in (for example `claude` then `/login`, or `codex login`).
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of integration?
+      options:
+        - ACP agent
+        - OpenAI-compatible model provider
+    validations:
+      required: true
+
+  - type: input
+    id: name
+    attributes:
+      label: Agent or provider, with version
+      description: For an agent, the agent and its ACP adapter if it uses one. For a provider, the service or server and its version.
+      placeholder: "Gemini CLI 0.9.0 / vLLM 0.8.4 / LM Studio 0.3.x"
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: The `.env` lines for it
+      description: "`AGENT_<ID>_*` or `PROVIDER_<ID>_*` lines, with keys removed. This will be formatted as code."
+      render: shell
+      placeholder: |
+        AGENT_GEMINI_COMMAND=gemini --experimental-acp
+        AGENT_GEMINI_NAME=Gemini CLI
+    validations:
+      required: true
+
+  - type: dropdown
+    id: symptom
+    attributes:
+      label: What goes wrong?
+      multiple: true
+      options:
+        - It doesn't appear in the model picker
+        - It fails to start or exits straight away
+        - It starts but never answers
+        - Replies don't stream, or arrive all at once
+        - Models, effort or modes are missing or wrong
+        - Permission requests, plans or diffs don't show
+        - Attachments or images don't reach it
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: What happens, and what works
+      description: What you see in the page, and anything that does work (for example, it answers but tool calls don't show).
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: AgentWebUI commit or version
+      description: "`git rev-parse --short HEAD` in your clone, or the version from `agentwebui_lite/__init__.py`."
+      placeholder: c0e7341
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Server OS, Python and Node.js versions
+      description: Node.js matters for agents started through `npx`.
+      placeholder: macOS 15, Python 3.13, Node 22
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Server logs
+      description: From the moment you pick the agent or model until it fails. Remove keys and tokens. This will be formatted as code.
+      render: text

@@ -1,0 +1,48 @@
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask anything about running, configuring or using AgentWebUI. When someone answers, mark the reply that solved it so the next person finds it.
+
+        Found a bug? [Open an issue](https://github.com/HackersHostel/AgentWebUI/issues/new/choose) instead. Found a security problem? Follow [SECURITY.md](https://github.com/HackersHostel/AgentWebUI/blob/main/SECURITY.md).
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: What are you trying to do, and where are you stuck?
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What you've tried
+      description: Commands, settings or docs you've already looked at, and what happened.
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How do you run it?
+      options:
+        - On my computer (pip and a virtualenv)
+        - On a server with deploy/install.sh (systemd and Caddy)
+        - Docker Compose
+        - Not running it yet
+        - Something else
+    validations:
+      required: true
+
+  - type: input
+    id: setup
+    attributes:
+      label: Agents or model providers involved
+      placeholder: "Claude Code and Codex; OpenRouter"
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant `.env` lines or logs
+      description: Remove API keys, `PASSWORD`, `EMBED_SECRET` and tokens first. This will be formatted as code.
+      render: shell

@@ -1,0 +1,144 @@
+name: Bug report
+description: Something in AgentWebUI is broken or behaves differently from what the docs say.
+title: "Bug: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. A clear report with steps we can follow gets fixed first.
+
+        - **A security problem?** Don't open an issue. Report it privately: see [SECURITY.md](https://github.com/HackersHostel/AgentWebUI/blob/main/SECURITY.md).
+        - **A question, or not sure it's a bug?** Ask in [Q&A](https://github.com/HackersHostel/AgentWebUI/discussions/categories/q-a).
+        - **An agent or model provider that won't connect?** Use the *Agent or provider compatibility* form instead.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the [open and closed issues](https://github.com/HackersHostel/AgentWebUI/issues?q=is%3Aissue) and this hasn't been reported.
+          required: true
+        - label: I can reproduce it on the latest `main`.
+          required: true
+        - label: I removed API keys, `PASSWORD`, `EMBED_SECRET`, tokens and private paths from everything I paste below.
+          required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem. Quote any error message exactly.
+      placeholder: When I attach a PDF to an agent chat, the reply never starts and the composer stays disabled.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The shortest list of steps that shows the problem, starting from a fresh page load.
+      placeholder: |
+        1. Start a new chat with Claude Code in ~/code/demo
+        2. Attach report.pdf with +
+        3. Send "Summarise this"
+        4. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Where in the app does it happen? Pick all that apply.
+      multiple: true
+      options:
+        - Model chats (OpenAI-compatible providers)
+        - Agent chats (ACP)
+        - Attachments and files in replies
+        - Pickers (choices blocks)
+        - Projects
+        - Files and Git
+        - Search, palette and shortcuts
+        - Voice
+        - Notifications and webhook
+        - Settings, themes and branding
+        - Sign-in, embed and managed mode
+        - Install script (systemd and Caddy)
+        - Docker
+        - Backups
+        - Something else
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: AgentWebUI commit or version
+      description: |
+        Run `git rev-parse --short HEAD` in your clone (`/opt/agentwebui-lite` with the install script), or give the version from `agentwebui_lite/__init__.py`.
+      placeholder: c0e7341
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How do you run it?
+      options:
+        - On my computer (pip and a virtualenv)
+        - On a server with deploy/install.sh (systemd and Caddy)
+        - Docker Compose
+        - Something else (say below)
+    validations:
+      required: true
+
+  - type: input
+    id: model-or-agent
+    attributes:
+      label: Model provider or agent involved
+      description: Name and version, if the bug involves one.
+      placeholder: "OpenRouter, anthropic/claude-sonnet-4 / Claude Code 2.x through @agentclientprotocol/claude-agent-acp"
+
+  - type: input
+    id: environment
+    attributes:
+      label: Server OS and Python version
+      placeholder: Ubuntu 24.04, Python 3.12
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: Safari 18 on iPhone, installed as an app
+
+  - type: textarea
+    id: settings
+    attributes:
+      label: Relevant `.env` settings
+      description: Only the lines that matter, with keys and secrets removed. This will be formatted as code.
+      render: shell
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Server logs and browser console
+      description: |
+        Server: the terminal you started it in, `journalctl -u agentwebui-lite -f`, or `docker compose logs app`.
+        Browser: the developer console. This will be formatted as code.
+      render: text
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or anything else
+      description: Drag images or recordings in here. For UI bugs, a screenshot saves a lot of back and forth.

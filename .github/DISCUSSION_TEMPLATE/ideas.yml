@@ -1,0 +1,30 @@
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas is the place to think out loud before something becomes a feature request. Upvote ideas you'd use, and add your own use case in the replies.
+
+        AgentWebUI stays small on purpose. Before posting, skim [What it does not do](https://github.com/HackersHostel/AgentWebUI#what-it-does-not-do).
+
+  - type: textarea
+    id: need
+    attributes:
+      label: What would you like to be able to do?
+      description: The need or the situation, in a few sentences. Why does it matter to you?
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: How you picture it working. Rough sketches and half-formed thoughts are welcome here.
+    validations:
+      required: true
+
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: Costs and open questions
+      description: Would it need a new dependency, service or setting? What could it break or complicate? What are you unsure about?

@@ -1,0 +1,31 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Show what you run with AgentWebUI: your setup, a theme or brand, an agent you connected, a dashboard you framed it in, or a workflow that works for you.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What you made
+      description: What it is and what it's for.
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or a recording
+      description: Drag images or a short video in here. Hide anything private first.
+
+  - type: textarea
+    id: setup
+    attributes:
+      label: How it's set up
+      description: Where it runs, which agents and models, and any `.env` settings worth sharing (no keys or secrets).
+
+  - type: input
+    id: link
+    attributes:
+      label: Link
+      description: A repository, post or live page, if there is one.

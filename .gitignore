@@ -8,3 +8,4 @@ workspace/
 work/
 build/
 dist/
+.DS_Store

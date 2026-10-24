@@ -1,0 +1,27 @@
+name: Documentation
+description: Something in the README, .env.example or another doc is wrong, unclear or missing.
+title: "Docs: "
+labels: ["documentation"]
+body:
+  - type: input
+    id: where
+    attributes:
+      label: Where?
+      description: The file and section, or a link to it.
+      placeholder: README.md › Put it on a VPS › Docker
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's wrong or missing?
+      description: Quote the text if it's wrong. If something is missing, say what you were trying to do when you looked for it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested wording
+      description: Optional. If you know what it should say, write it here, or open a pull request straight away.
