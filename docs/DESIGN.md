@@ -34,7 +34,7 @@ Motion durations and reduced-motion rules, the Accessibility focus and keyboard 
 | Project | `js/projects.js`, `js/sidebar.js` | Folder, default agent or model, instructions; chats grouped under it; Move to project |
 | Organize chats | `js/sidebar.js` | Pinned, Projects, Archived; row menu with pin, move, clone, export, archive |
 | Artifacts (Lite version) | `js/messages.js` | Images and files from agents and models in the chat, HTML/SVG preview in a sandboxed frame, Save to workspace |
-| Brand | `server.py`, `index.html`, `js/logos.js` | Name, logo, greeting, theme and accent from .env; manifest for installing. Agents, model makers and providers show their own logos (`static/logos`); one without a logo keeps its gradient |
+| Brand | `server.py`, `index.html`, `js/brand.js`, `js/logos.js` | Name, logo, greeting, theme and accent from .env; manifest for installing. The app's logo (`static/brand`) and favicon take the ink of the theme and accent; `BRAND_LOGO` replaces them. Agents, model makers and providers show their own logos (`static/logos`); one without a logo keeps its gradient |
 | Sign in | `js/states.js` | |
 | App states (SystemStates) | `js/states.js` | Offline banner, loading, not found, page error |
 | Mobile · chat, Tablet portrait, Tablet landscape | `css/app.css` | Phone header and composer under 760px, rail and drawer under 1024px, slide-over context panel under 1180px |
