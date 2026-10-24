@@ -5,8 +5,13 @@ import { Logo, agentLogo, modelLogo, providerLogo } from './logos.js';
 import { Dialog } from './ui.js';
 import { newChat } from './actions.js';
 
-// `local` lists the models of providers the server marks as local (providers.is_local: this machine or its network).
-const TABS = [['all', 'All'], ['agents', 'Connected Agents'], ['models', 'Models'], ['local', 'On this machine'], ['fav', 'Favorites']];
+// `local` lists the models the server found local (locality.py: an address on this machine or its network, where a
+// known local engine answers), or that .env marks local. Agents are never listed there: the app can't see where an
+// agent's model runs.
+const TABS = [['all', 'All'], ['agents', 'Connected Agents'], ['models', 'Models'], ['local', 'Local models'], ['fav', 'Favorites']];
+// Where a provider's address leads (`endpoint`), as the picker says it.
+const WHERE = { machine: 'this machine', network: 'your network', internet: 'the internet' };
+const RUNS = { machine: 'This machine', network: 'Your network', internet: 'The internet' };
 const DOT = ['#3a8ee6', '#3dd68c', '#b3a4ff', '#ffb38a', '#5fd4c4', '#f783ac'];
 
 function entries(config, hidden = {}) {
@@ -14,7 +19,7 @@ function entries(config, hidden = {}) {
   const items = config.models.filter((m) => !hidden[`model:${m.id}`]).map((m) => ({
     value: `model:${m.id}`, name: m.model, raw: m.model, group: m.provider, local: m.local, kind: 'model',
     badge: m.local ? 'Local' : '', logo: providerGradient(m.provider, m.local), mark: modelLogo(m.model) || providerLogo(providers.get(m.provider)),
-    desc: m.local ? `Runs on ${providers.get(m.provider)?.host || 'this machine'}. Nothing leaves your network.` : `Served by ${providers.get(m.provider)?.name || m.provider} through your key.`,
+    desc: describe(m, providers.get(m.provider)), why: m.why,
   }));
   for (const a of config.agents) {
     const models = !config.lock_model && a.options && a.options.filter((o) => o.category === 'model').flatMap((o) => (o.options || []).flatMap((x) => x.options || [x]));
@@ -24,8 +29,17 @@ function entries(config, hidden = {}) {
   }
   // The connected agents come first, above every provider's models.
   const groups = [{ id: '__agents', name: 'Connected Agents', sub: 'In a folder', color: '#f5b94a', where: 'Your computer' },
-    ...[...providers.values()].map((p) => ({ id: p.id, name: p.name, sub: `OpenAI-compatible · ${p.host}`, color: p.color, where: p.local ? 'This network' : `${p.name}, through your key` }))];
+    ...[...providers.values()].map((p) => ({ id: p.id, name: p.name, sub: `OpenAI-compatible · ${p.host}`, color: p.color,
+      where: RUNS[p.endpoint] || (p.checking ? 'Checking…' : 'Unknown') }))];
   return { items, groups };
+}
+
+// Only what was checked: the engine and host for a local model, else where its endpoint is.
+function describe(m, p) {
+  if (m.local) return p?.engine ? `Runs on ${p.engine} at ${p.host}.` : 'Marked local in .env.';
+  const by = p?.name || m.provider;
+  if (WHERE[p?.endpoint]) return `Served by ${by} from ${WHERE[p.endpoint]}.`;
+  return p?.checking ? `Served by ${by}. Checking where it runs…` : `Served by ${by}.`;
 }
 
 export function ModelPicker({ value, onPick, chat, tab: initialTab, onClose }) {
@@ -92,7 +106,7 @@ export function ModelPicker({ value, onPick, chat, tab: initialTab, onClose }) {
           </button>`)}
         </div>`)}
         ${flat.length === 0 && html`<div class="picker-empty">${needle ? html`No model matches “${q}”.` : tab === 'fav' ? 'No favorites yet. Star a model to keep it here.'
-          : tab === 'local' ? html`No models run on this machine yet. Add Ollama or LM Studio in .env:<br /><span class="mono">PROVIDER_OLLAMA_URL=http://127.0.0.1:11434/v1</span>`
+          : tab === 'local' ? html`No local models yet. Add Ollama or LM Studio in .env:<br /><span class="mono">PROVIDER_OLLAMA_URL=http://127.0.0.1:11434/v1</span>`
           : 'Nothing here yet.'}<br />
           <a href="#/settings/providers" onClick=${(e) => { e.preventDefault(); onClose(); navigate('#/settings/providers'); }} style="color: var(--ac-tx)">Connect another provider</a></div>`}
       </div>
@@ -107,6 +121,7 @@ export function ModelPicker({ value, onPick, chat, tab: initialTab, onClose }) {
         <div><div style="font-size: 16px; font-weight: 600; letter-spacing: -0.01em">${hotItem.name}</div>
           <div class="mono" style="font-size: 11.5px; color: var(--tx-3); margin-top: 2px; word-break: break-all">${hotItem.raw}</div></div>
         <p style="margin: 0; font-size: 13px; line-height: 1.55; color: var(--tx-2)">${hotItem.desc}</p>
+        ${hotItem.why && html`<p class="picker-why" style="margin: 0; font-size: 12px; line-height: 1.5; color: var(--tx-3)">${hotItem.why}</p>`}
       </div>
       <div class="kv-list small">
         <div><span>Provider</span><span>${hotGroup?.name}</span></div>

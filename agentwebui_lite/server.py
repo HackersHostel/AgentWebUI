@@ -145,6 +145,7 @@ async def _lifetime(app: web.Application):
     http = aiohttp.ClientSession()
     app[HTTP] = http
     app[PROVIDERS] = Providers(app[SETTINGS].providers, http)
+    app[PROVIDERS].locality.start()  # in the background: no page waits for these checks
     app[AGENTS].start_reaper()
     yield
     for turn in list(app[TURNS].values()):
@@ -152,6 +153,7 @@ async def _lifetime(app: web.Application):
             turn.task.cancel()
     await asyncio.gather(*(t.task for t in app[TURNS].values() if t.task), return_exceptions=True)
     await app[AGENTS].close()
+    await app[PROVIDERS].locality.close()
     await http.close()
     app[STORE].close()
     app[TEMP].close()

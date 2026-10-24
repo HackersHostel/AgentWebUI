@@ -1,7 +1,7 @@
 """Settings from the environment and a `.env` file. The environment wins over the file.
 
 Models:  PROVIDER_<ID>_URL, PROVIDER_<ID>_KEY, PROVIDER_<ID>_MODELS (comma list; else asked from <url>/models),
-         PROVIDER_<ID>_NAME
+         PROVIDER_<ID>_NAME, PROVIDER_<ID>_LOCAL (true or false: whether its models are local, in place of the check)
 Agents:  AGENT_<ID>_COMMAND (an ACP agent's command line), AGENT_<ID>_NAME, AGENT_<ID>_CWD, AGENT_<ID>_MODEL,
          AGENT_<ID>_MODELS (comma list; the only models the page offers for that agent)
 Files:   FILES_ROOTS (folders the file manager may open and agents may work in; else WORKSPACE_DIR and agent folders)
@@ -32,6 +32,7 @@ class Provider:
     url: str
     key: str = ""
     models: tuple[str, ...] = ()
+    local: bool | None = None  # PROVIDER_<ID>_LOCAL; None: decided by `locality`
 
 
 @dataclass(frozen=True)
@@ -135,7 +136,11 @@ def load(env_file: Path | None = None, environ: dict[str, str] | None = None) ->
             if not url:
                 raise ConfigError(f"PROVIDER_{ident.upper()}_URL is missing")
             models = tuple(m.strip() for m in values.get("MODELS", "").split(",") if m.strip())
-            providers.append(Provider(ident, values.get("NAME") or ident, url, values.get("KEY", ""), models))
+            local = values.get("LOCAL", "").strip().lower()
+            if local and local not in ("1", "true", "yes", "on", "0", "false", "no", "off"):
+                raise ConfigError(f"PROVIDER_{ident.upper()}_LOCAL takes true or false, not {values['LOCAL']!r}")
+            providers.append(Provider(ident, values.get("NAME") or ident, url, values.get("KEY", ""), models,
+                                      _yes(local) if local else None))
         else:
             command = tuple(shlex.split(values.get("COMMAND", "")))
             if not command:

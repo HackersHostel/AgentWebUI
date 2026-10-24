@@ -5,7 +5,7 @@ import { html, useState, useEffect, store, useStore, cx, navigate, copyText, api
 import { Icon } from './icons.js';
 import { Logo, agentLogo, providerLogo } from './logos.js';
 import { THEMES, SWATCHES, FONTS, CODES, SIZES, ACCENTS, setPrefs, customVars, setChatPrefs, resetEverything } from './prefs.js';
-import { loadConfig, targets, defaultTarget } from './actions.js';
+import { loadConfig, followChecks, targets, defaultTarget } from './actions.js';
 import { canDictate, canSpeak, voices, speak } from './voice.js';
 import { confirm } from './ui.js';
 
@@ -169,7 +169,7 @@ function Providers() {
   const [showModels, setShowModels] = useState(null);
   const test = async () => {
     setTesting(true);
-    try { store.set({ config: await api('/api/config?refresh=1') }); toast('Checked every provider again.'); }
+    try { const fresh = await api('/api/config?refresh=1'); store.set({ config: fresh }); followChecks(fresh); toast('Checked every provider again.'); }
     catch (e) { toast(e.message); }
     finally { setTesting(false); }
   };
@@ -190,11 +190,12 @@ function Providers() {
                   : html`<span class="pill ok"><span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor"></span>Connected</span>`}
                 <span class="pill" style="color: var(--tx-3)">From .env</span></div>
               <div class="prov-sub">OpenAI-compatible · <span class="mono">${p.host}</span> · ${p.has_key ? 'key set' : 'no key'} · ${p.models} model${p.models === 1 ? '' : 's'}${p.listed ? ' listed in .env' : ''}</div>
+              <div class="prov-sub">${p.why}</div>
             </div>
             <button class="btn btn-g" onClick=${test}>Test</button>
             <button class="btn btn-g" onClick=${() => setShowModels(showModels === p.id ? null : p.id)} aria-expanded=${showModels === p.id}>Models</button>
           </div>
-          ${p.error && html`<div class="prov-note">${p.error}. Its models are hidden from the picker until it answers.${p.local ? html` If it runs on this machine, start it (for Ollama: <code class="mono">ollama serve</code>) and test again.` : ''}</div>`}
+          ${p.error && html`<div class="prov-note">${p.error}. Its models are hidden from the picker until it answers.${p.endpoint === 'machine' || p.endpoint === 'network' ? html` If it runs on this machine, start it (for Ollama: <code class="mono">ollama serve</code>) and test again.` : ''}</div>`}
           ${showModels === p.id && html`<div class="prov-models" role="group" aria-label=${`Models from ${p.name}`}>
             <span class="meta" style="width: 100%">Shown in the model picker. Tap one to hide it on this browser.</span>
             ${(config.models.filter((m) => m.provider === p.id)).map((m) => {
