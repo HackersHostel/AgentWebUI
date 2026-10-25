@@ -1,10 +1,13 @@
 <div align="center">
 
-<img src="agentwebui_lite/static/logo.svg" width="96" height="96" alt="AgentWebUI logo">
+<a href="https://hackershostel.com/agentwebui/"><img src="agentwebui_lite/static/logo.svg" width="96" height="96" alt="AgentWebUI logo"></a>
 
-<h1>AgentWebUI</h1>
+<h1><a href="https://hackershostel.com/agentwebui/">AgentWebUI</a></h1>
 
 <p><strong>Chat with AI models and command-line agents from one small web page, on your own server.</strong></p>
+
+<p>Any OpenAI-compatible model · Claude Code, Codex, Gemini CLI and other ACP agents · Files and Git · Voice<br>
+No accounts, no setup screen, one <code>.env</code> file.</p>
 
 <p>
   <a href="https://github.com/HackersHostel/AgentWebUI/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/HackersHostel/AgentWebUI/tests.yml?branch=main&label=tests" alt="Tests"></a>
@@ -15,13 +18,18 @@
 </p>
 
 <p>
-  <a href="https://hackershostel.com/agentwebui">Website</a> ·
-  <a href="#run-it-on-your-computer">Quick start</a> ·
-  <a href="#docker">Docker</a> ·
-  <a href="#configure">Configure</a> ·
-  <a href="docs/API.md">API</a> ·
-  <a href="CONTRIBUTING.md">Contributing</a>
+  <a href="https://hackershostel.com/agentwebui/"><strong>Website</strong></a> ·
+  <a href="#run-it-on-your-computer"><strong>Quick start</strong></a> ·
+  <a href="#docker"><strong>Docker</strong></a> ·
+  <a href="#configure"><strong>Configuration</strong></a> ·
+  <a href="docs/API.md"><strong>API docs</strong></a> ·
+  <a href="CONTRIBUTING.md"><strong>Contributing</strong></a>
 </p>
+
+<br>
+
+<img src="docs/screenshots/agent-model-menu.png" width="76%" alt="An agent chat with its plan, tool call and permission, and the agent's model and effort menu open">
+<img src="docs/screenshots/phone.png" width="22%" alt="A chat at phone width">
 
 </div>
 
@@ -39,11 +47,7 @@ Geist.
 
 <p>
   <img src="docs/screenshots/chat.png" width="49%" alt="A model chat: the reply with its reasoning folded above it">
-  <img src="docs/screenshots/agent-model-menu.png" width="49%" alt="An agent chat with its plan, tool call and permission, and the agent's model and effort menu open">
-</p>
-<p>
-  <img src="docs/screenshots/files-and-git.png" width="76%" alt="Files and Git: a folder, a file open, and the changed files ready to commit">
-  <img src="docs/screenshots/phone.png" width="22%" alt="A chat at phone width">
+  <img src="docs/screenshots/files-and-git.png" width="49%" alt="Files and Git: a folder, a file open, and the changed files ready to commit">
 </p>
 
 ## What you can do
