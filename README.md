@@ -1,12 +1,32 @@
-<img src="agentwebui_lite/static/logo.svg" width="256" alt="">
+<div align="center">
 
-# [AgentWebUI](https://hackershostel.com/agentwebui)
+<img src="agentwebui_lite/static/logo.svg" width="96" height="96" alt="AgentWebUI logo">
 
-[![Tests](https://github.com/HackersHostel/AgentWebUI/actions/workflows/tests.yml/badge.svg)](https://github.com/HackersHostel/AgentWebUI/actions/workflows/tests.yml)
+<h1>AgentWebUI</h1>
 
-One small web page to chat with AI models and with command-line agents, on your own server. Open it and chat:
-there is no setup screen and no accounts. Everything is configured in `.env`. The package and command are still
-named `agentwebui-lite`.
+<p><strong>Chat with AI models and command-line agents from one small web page, on your own server.</strong></p>
+
+<p>
+  <a href="https://github.com/HackersHostel/AgentWebUI/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/HackersHostel/AgentWebUI/tests.yml?branch=main&label=tests" alt="Tests"></a>
+  <a href="https://github.com/HackersHostel/AgentWebUI/releases"><img src="https://img.shields.io/github/v/tag/HackersHostel/AgentWebUI?label=version&color=6e56cf" alt="Version"></a>
+  <a href="https://github.com/HackersHostel/AgentWebUI/pkgs/container/agentwebui"><img src="https://img.shields.io/badge/docker-ghcr.io-2496ed?logo=docker&logoColor=white" alt="Docker image"></a>
+  <img src="https://img.shields.io/badge/python-3.11%2B-3776ab?logo=python&logoColor=white" alt="Python 3.11+">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-6e56cf" alt="MIT license"></a>
+</p>
+
+<p>
+  <a href="https://hackershostel.com/agentwebui">Website</a> ·
+  <a href="#run-it-on-your-computer">Quick start</a> ·
+  <a href="#docker">Docker</a> ·
+  <a href="#configure">Configure</a> ·
+  <a href="docs/API.md">API</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
+
+</div>
+
+Open it and chat: there is no setup screen and no accounts. Everything is configured in `.env`. The package and
+command are still named `agentwebui-lite`.
 
 - **Models:** any OpenAI-compatible API (OpenAI, OpenRouter, NVIDIA, Groq, Ollama, LM Studio, vLLM, …).
 - **Agents:** anything that speaks the [Agent Client Protocol](https://agentclientprotocol.com) over stdio: Claude
