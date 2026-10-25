@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install AgentWebUI Lite on a fresh Ubuntu (22.04+) or Debian (12+) server: a dedicated user, a Python venv, a
+# Install AgentWebUI on a fresh Ubuntu (22.04+) or Debian (12+) server: a dedicated user, a Python venv, a
 # systemd service, Claude Code and Codex over ACP, Caddy for HTTPS, and a daily backup. Run it again to update.
 #
 #   sudo DOMAIN=chat.example.com ./deploy/install.sh            # from a checkout

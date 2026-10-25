@@ -62,6 +62,7 @@ called `agentwebui-lite`.
 | `agentwebui_lite/static/` | The web client: `index.html`, `js/` (Preact through htm, no build step), `css/tokens.css` (the design tokens) |
 | `tests/` | `conftest.py` (a fake OpenAI server and app fixtures) and `fake_agent.py` (a scripted ACP agent) |
 | `deploy/`, `Dockerfile`, `docker-compose.yml` | The VPS install script with systemd and Caddy, and the Docker setup |
+| `docs/` | `API.md` (the HTTP API and its events) and the README's screenshots |
 
 Each Python module and each client file starts with a comment saying what it covers. Read that before changing it.
 

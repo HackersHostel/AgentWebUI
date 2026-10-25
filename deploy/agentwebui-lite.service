@@ -1,4 +1,4 @@
-# systemd unit for AgentWebUI Lite. deploy/install.sh installs it; the paths below are its defaults.
+# systemd unit for AgentWebUI. deploy/install.sh installs it; the paths below are its defaults.
 [Unit]
 Description=AgentWebUI Lite
 After=network-online.target
