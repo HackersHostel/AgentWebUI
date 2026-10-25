@@ -270,6 +270,10 @@ FILES_ROOTS=~/code,~/notes         # what Files shows and where agents may work
 - Models and agents come only from `.env`; the browser switches between them, hides models you don't use, and
   remembers your defaults (Settings › Chat has "Reset to defaults"). `AGENT_<ID>_MODELS` limits an agent's model
   menu to the models you list, in that order.
+- A model counts as local, and shows under the picker's **Local models** tab, only when its provider's address is on
+  this machine or your network and Ollama, LM Studio, vLLM or llama.cpp's server answers there. Other engines on
+  your machine (LocalAI, TGI, Jan, KoboldCpp, …) aren't recognised: add `PROVIDER_<ID>_LOCAL=true`, as in
+  `PROVIDER_LOCALAI_LOCAL=true`. [Local models](#local-models) explains the check.
 
 ### Agent setup
 
@@ -306,6 +310,55 @@ the chat, and the server's log has the rest. Any other agent that speaks ACP ove
   `DATA_DIR=data`, are relative to the folder the server starts in too.
 - **Some values are cut short:** `BRAND_NAME` to 40 characters, `BRAND_GREETING` to 120, `USER_NAME` to 60.
 - **Changes take effect on the next start.**
+
+### Local models
+
+The model picker's **Local models** tab lists the models that run on this server or on your own network. AgentWebUI
+calls a model local only with two pieces of evidence:
+
+1. **Its provider's address leads to this machine or your network.** The host in `PROVIDER_<ID>_URL` is looked up,
+   and each of its addresses is one of:
+   - *this machine*: a loopback address such as `127.0.0.1`, or an address of this server;
+   - *your network*: a private address (`10.…`, `172.16.…`, `192.168.…`, `fd…`, link-local) or a `100.64.0.0/10`
+     address such as Tailscale's, when this server reaches it from an address of the same kind, so it is on that
+     network itself;
+   - *the internet*: anything else, and any address this server has no route to or name that doesn't resolve.
+
+   A name with several addresses counts as its least local one.
+2. **A local engine it recognises answers there:** Ollama, LM Studio, vLLM or llama.cpp's server. Each is recognised
+   by a reply only it gives, with the provider's key sent along.
+
+So a gateway on this machine that forwards to the cloud, such as LiteLLM, is not local, and neither are Ollama's
+cloud models (such as `gpt-oss:120b-cloud`), even through your own Ollama. The check runs in the background when the
+server starts and every five minutes; Settings › Providers › Test all runs it at once. Until it ends, a provider is
+not local. Agents never show under Local models: the app can't see where an agent's model runs.
+
+**Engines it doesn't recognise aren't local until you say so.** LocalAI, Hugging Face TGI, Jan, KoboldCpp, TabbyAPI,
+text-generation-webui and other servers aren't recognised, so their models stay out of Local models even on your own
+machine. That is a gap in coverage, never a false claim: a model is only called local with evidence, or when you say
+so:
+
+```bash
+PROVIDER_LOCALAI_URL=http://127.0.0.1:8080/v1
+PROVIDER_LOCALAI_LOCAL=true
+```
+
+**And the other way:** `PROVIDER_<ID>_LOCAL=false` keeps a provider out of Local models, for example an Ollama
+reached through a proxy on this machine that forwards to another one. The setting wins over the check both ways. It
+takes `true` or `false` (or `yes`/`no`, `on`/`off`, `1`/`0`); anything else stops the server at start.
+
+**Why it says local or not.** Each model's detail panel in the picker, and each provider in Settings › Providers,
+give the reason in one line:
+
+| Reason | What it means |
+|---|---|
+| `Local: Ollama answered at 192.168.1.20 (your network)` | Both pieces of evidence |
+| `Local: marked local in .env` | `PROVIDER_<ID>_LOCAL=true` |
+| `Not local: no known local engine answered at localhost:4000 (this machine)` | The address is local, but no engine it recognises answered: a gateway, or an engine it doesn't know. If the model really runs there, set `PROVIDER_<ID>_LOCAL=true`. |
+| `Not local: api.example.com (203.0.113.7) is on the internet` | The address leads outside this machine and your network |
+| `Not local: gpt-oss:120b-cloud is an Ollama cloud model, served from elsewhere` | Ollama answered, but runs this model somewhere else |
+| `Not local: models.lan: its name did not resolve` | The host couldn't be looked up, so nothing proves it is local |
+| `Not local: marked not local in .env` | `PROVIDER_<ID>_LOCAL=false` |
 
 ### If it won't start
 
