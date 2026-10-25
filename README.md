@@ -1,4 +1,6 @@
-<img src="agentwebui_lite/static/logo.svg" width="256" alt="">
+<div align="center">
+  <img src="agentwebui_lite/static/logo.svg" width="128" alt="AgentWebUI Logo">
+</div>
 
 # [AgentWebUI](https://hackershostel.com/agentwebui)
 
