@@ -1,6 +1,6 @@
 <img src="agentwebui_lite/static/logo.svg" width="56" alt="">
 
-# AgentWebUI
+# [AgentWebUI](https://hackershostel.com/agentwebui)
 
 [![Tests](https://github.com/HackersHostel/AgentWebUI/actions/workflows/tests.yml/badge.svg)](https://github.com/HackersHostel/AgentWebUI/actions/workflows/tests.yml)
 
