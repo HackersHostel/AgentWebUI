@@ -1,4 +1,4 @@
-# HTTPS in front of AgentWebUI Lite. Caddy gets and renews the certificate for the domain by itself.
+# HTTPS in front of AgentWebUI. Caddy gets and renews the certificate for the domain by itself.
 # The app needs TRUST_PROXY=true in .env so its cookie is marked secure.
 {$DOMAIN} {
 	encode zstd gzip

@@ -6,6 +6,15 @@ change settings or behavior, and its entry says how.
 
 ## [Unreleased]
 
+### Added
+
+- Docs for running it on your own computer (a model, an agent, where agents work, how to tell it started and how
+  to update), how `.env` is read, what stops it from starting, setting up each agent, what `DATA_DIR` holds, what a
+  backup leaves out, and how to restore one. The HTTP API, its events and embed-link signing are in `docs/API.md`,
+  and the README shows screenshots again.
+- Docs for which models count as local: the engines that are recognised, how an address is classed,
+  `PROVIDER_<ID>_LOCAL` both ways for engines it doesn't recognise, and how to read the reason the picker gives.
+
 ## [0.3.0] - 2026-10-25
 
 ### Added

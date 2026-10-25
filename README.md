@@ -17,6 +17,15 @@ The server is about 3,000 lines of Python with one dependency (`aiohttp`) and us
 client is Preact through htm with no build step. Nothing loads from the internet unless you pick a font other than
 Geist.
 
+<p>
+  <img src="docs/screenshots/chat.png" width="49%" alt="A model chat: the reply with its reasoning folded above it">
+  <img src="docs/screenshots/agent-model-menu.png" width="49%" alt="An agent chat with its plan, tool call and permission, and the agent's model and effort menu open">
+</p>
+<p>
+  <img src="docs/screenshots/files-and-git.png" width="76%" alt="Files and Git: a folder, a file open, and the changed files ready to commit">
+  <img src="docs/screenshots/phone.png" width="22%" alt="A chat at phone width">
+</p>
+
 ## What you can do
 
 | | |
@@ -35,15 +44,69 @@ Geist.
 
 ## Run it on your computer
 
-Needs Python 3.11+.
+On macOS or Linux, with Python 3.11+ and Git:
 
 ```bash
+git clone https://github.com/HackersHostel/AgentWebUI.git && cd AgentWebUI
 python3 -m venv .venv && .venv/bin/pip install -e .
-cp .env.example .env        # then turn on a model provider or an agent
-.venv/bin/agentwebui-lite  # http://127.0.0.1:3000
+cp .env.example .env        # then turn on a model provider or an agent (below)
+.venv/bin/agentwebui-lite   # http://127.0.0.1:3000
 ```
 
-Run the tests with `.venv/bin/pip install -e '.[dev]' && .venv/bin/pytest`.
+Start it from this folder: it reads `.env` from the folder it starts in, and keeps its data in `data/` there. Stop
+it with Ctrl+C. Without `PASSWORD` it answers only on this computer, so there is nothing to sign in to.
+
+**A model.** In `.env`, take the `#` off a provider's lines. A model on your computer through
+[Ollama](https://ollama.com) needs no key:
+
+```bash
+PROVIDER_OLLAMA_URL=http://127.0.0.1:11434/v1
+```
+
+A cloud API needs its key, for example `PROVIDER_OPENROUTER_URL=https://openrouter.ai/api/v1` and
+`PROVIDER_OPENROUTER_KEY=sk-or-…`. The page lists what the provider's `/models` reports.
+
+**An agent.** Agents are programs you install and sign in to yourself; AgentWebUI starts them when a chat needs one.
+For Claude Code, install [Node.js](https://nodejs.org) (the adapter runs through `npx`), then sign in once in a
+terminal:
+
+```bash
+npm install -g @anthropic-ai/claude-code
+claude                      # then /login, then /exit
+```
+
+and add to `.env`:
+
+```bash
+AGENT_CLAUDE_COMMAND=npx -y @agentclientprotocol/claude-agent-acp
+```
+
+Codex is the same with `npm install -g @openai/codex` and `codex login`. [Agent setup](#agent-setup) has every agent.
+An agent runs as you, with its own sign-in, so it must be signed in for the user that starts AgentWebUI.
+
+**Where agents work.** Without `WORKSPACE_DIR`, a new agent chat starts in your home folder. Without `FILES_ROOTS`,
+the Files page shows `WORKSPACE_DIR` (or your home folder) and each agent's `AGENT_<ID>_CWD`, and agent chats may only
+work inside those. Set `WORKSPACE_DIR=~/code` or `FILES_ROOTS=~/code` to keep the Files page and new agent chats to
+that folder. It doesn't fence the agent in: an agent you allow to run commands can reach whatever your user can.
+
+**Check that it started.** It logs what it found, then the address:
+
+```
+INFO 1 model provider(s), 1 agent(s); data in /home/you/AgentWebUI/data
+INFO open http://127.0.0.1:3000
+```
+
+`WARNING nothing to chat with yet` means no `PROVIDER_*` or `AGENT_*` line was read; check
+[How `.env` is read](#how-env-is-read). If it stops at once with `agentwebui-lite: …`, see
+[If it won't start](#if-it-wont-start). After you change `.env`, stop and start it again.
+
+**Update** from the same folder, then start it again:
+
+```bash
+git pull && .venv/bin/pip install -e .
+```
+
+To work on AgentWebUI itself, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Put it on a VPS
 
@@ -97,7 +160,8 @@ docker compose exec app codex login --device-auth
 ```
 
 Set `AGENTWEBUI_TAG=slim` (or a version, or `edge`) to run another tag. Update with `docker compose pull && docker
-compose up -d`. Data lives in the `data` volume, the agents' sign-ins in `home`, and your projects in `./work`.
+compose up -d`, or, if you build this checkout, `git pull && docker compose up -d --build`. Data lives in the `data`
+volume, the agents' sign-ins in `home`, and your projects in `./work`.
 
 To try it on your own computer without Caddy:
 
@@ -119,14 +183,62 @@ install script makes one), keep `FILES_ROOTS` narrow, and consider putting the p
 Access. Wrong passwords are limited to 8 per address per 10 minutes. Uploaded and agent-written files are served
 sandboxed, so an HTML or SVG file can't run as the page.
 
-### Backups
+## Data and backups
 
-`agentwebui-lite backup [FILE]` writes a consistent copy of the database while the server runs (to
-`DATA_DIR/backups/` by default). The install script adds a daily cron job that keeps the 14 newest copies; for other
-setups, add this line yourself:
+Everything AgentWebUI keeps is in `DATA_DIR`: `data/` in the folder it starts in, `/var/lib/agentwebui-lite` with
+the install script, and the `data` volume (`/data` inside the container) with Docker.
+
+| | |
+|---|---|
+| `chats.db` | Chats, messages, projects, the names of attached files, and the agents' cached options, in SQLite. While the server runs, `chats.db-wal` and `chats.db-shm` sit beside it; they are part of the database. |
+| `files/` | The attachments and uploads themselves, and the images and files agents send into a chat |
+| `secret.key` | Signs the sign-in cookie (with `PASSWORD`). Losing it, or changing `PASSWORD`, signs every browser out. |
+| `backups/` | Copies made by `agentwebui-lite backup` |
+
+Temporary chats are never written here, and files an agent writes in its folder stay in that folder.
+
+`agentwebui-lite backup [FILE]` writes a consistent copy of `chats.db` while the server runs (to
+`DATA_DIR/backups/` by default). **It copies only `chats.db`**: back up `files/` and `secret.key` as well, with your
+usual tools. Files in `files/` are written once and never changed, so a plain copy is safe while the server runs.
+Run the command with the same `.env` as the server: from the same folder, or with `AWL_ENV_FILE` (below). With
+Docker, `docker compose exec app agentwebui-lite backup` writes to `/data/backups`.
+
+The install script adds a daily cron job that keeps the 14 newest copies; for other setups, add this line yourself:
 
 ```
 17 3 * * * agentwebui cd /var/lib/agentwebui-lite && AWL_ENV_FILE=/etc/agentwebui-lite/.env /opt/agentwebui-lite/.venv/bin/agentwebui-lite backup
+```
+
+To restore a backup:
+
+1. Stop the server: Ctrl+C, `sudo systemctl stop agentwebui-lite`, or `docker compose stop app`.
+2. In `DATA_DIR`, move `chats.db` out of the way **together with** any `chats.db-wal` and `chats.db-shm` beside it.
+   A clean stop removes those two; if they are still there, they belong to the old database and must not be left
+   next to the backup.
+3. Copy the backup in as `chats.db`. If you backed up `files/`, put it back too; an attachment whose file is missing
+   shows as not found.
+4. Start the server again and check your chats are there.
+
+On your computer, from the AgentWebUI folder, with the server stopped:
+
+```bash
+cd data && mkdir -p before-restore && mv chats.db* before-restore/ && cp backups/chats-20261025-031700.db chats.db
+```
+
+With the install script:
+
+```bash
+sudo systemctl stop agentwebui-lite
+sudo -u agentwebui sh -c 'cd /var/lib/agentwebui-lite && mkdir -p before-restore && mv chats.db* before-restore/ && cp backups/chats-20261025-031700.db chats.db'
+sudo systemctl start agentwebui-lite
+```
+
+With Docker:
+
+```bash
+docker compose stop app
+docker compose run --rm --no-deps app sh -c 'cd /data && mkdir -p before-restore && mv chats.db* before-restore/ && cp backups/chats-20261025-031700.db chats.db'
+docker compose start app
 ```
 
 ## Configure
@@ -151,12 +263,128 @@ FILES_ROOTS=~/code,~/notes         # what Files shows and where agents may work
   are much larger than this server (Claude Code about 370 MB, Codex about 580 MB), so this matters on a small machine.
 - Without `PASSWORD` the server only answers on localhost. Set `PASSWORD` to listen on another address.
 - To show the page inside another site, such as your own dashboard: list that site in `FRAME_ANCESTORS`, set
-  `EMBED_SECRET`, and have the site open the frame at a one-time `/embed?token=…` link it signs (the format is in
-  `.env.example`). `LOCK_MODEL` and `LOCK_FOLDER` hide the model and folder choices when the site decides them.
+  `EMBED_SECRET`, and have the site open the frame at a one-time `/embed?token=…` link it signs
+  ([docs/API.md](docs/API.md#signing-embed-links) shows how). `LOCK_MODEL` and `LOCK_FOLDER` hide the model and
+  folder choices when the site decides them.
 - `LOGIN_EMAIL` (with `PASSWORD`) makes sign-in ask for that email too, for a dashboard that hands out logins.
 - Models and agents come only from `.env`; the browser switches between them, hides models you don't use, and
   remembers your defaults (Settings › Chat has "Reset to defaults"). `AGENT_<ID>_MODELS` limits an agent's model
   menu to the models you list, in that order.
+- A model counts as local, and shows under the picker's **Local models** tab, only when its provider's address is on
+  this machine or your network and Ollama, LM Studio, vLLM or llama.cpp's server answers there. Other engines on
+  your machine (LocalAI, TGI, Jan, KoboldCpp, …) aren't recognised: add `PROVIDER_<ID>_LOCAL=true`, as in
+  `PROVIDER_LOCALAI_LOCAL=true`. [Local models](#local-models) explains the check.
+
+### Agent setup
+
+Install each agent and sign it in as the user that runs AgentWebUI (`sudo -iu agentwebui …` with the install script,
+`docker compose exec app …` with Docker). Commands that start with `npx` need [Node.js](https://nodejs.org).
+
+| Agent | Install | Sign in once | `AGENT_<ID>_COMMAND` | Good to know |
+|---|---|---|---|---|
+| Claude Code | `npm install -g @anthropic-ai/claude-code` | `claude`, then `/login` | `npx -y @agentclientprotocol/claude-agent-acp` | The install script and the Docker image install the adapter, so there it is `claude-agent-acp` |
+| Codex | `npm install -g @openai/codex` | `codex login`; on a server without a browser, `codex login --device-auth` | `npx -y @agentclientprotocol/codex-acp` | Likewise `codex-acp` with the install script and the image |
+| Gemini CLI | `npm install -g @google/gemini-cli` | `gemini`, and sign in with Google; or set `GEMINI_API_KEY` | `gemini --acp` | Older versions take `--experimental-acp` instead; `gemini --help` shows which |
+| OpenCode | `npm install -g opencode-ai` | `opencode auth login` | `opencode acp` | `opencode` must be on the server's `PATH` |
+| Hermes | Its [install script](https://github.com/NousResearch/hermes-agent) | `hermes model` to choose a provider and model | `hermes acp` | Needs Hermes's ACP support; its docs say how to add it if `hermes acp` is missing |
+| Pi | `npm install -g @earendil-works/pi-coding-agent` | `pi`, then `/login` | `npx -y pi-acp` | `pi` must be on the server's `PATH` |
+
+Agents change faster than this table: if one won't start, its own `--help` and docs win. The agent's error shows in
+the chat, and the server's log has the rest. Any other agent that speaks ACP over stdio works the same way.
+
+### How `.env` is read
+
+- **One `KEY=value` per line.** Lines starting with `#` are comments, `export KEY=value` works, and a value may be
+  in `"double"` or `'single'` quotes.
+- **In a value without quotes, a space and `#` start a comment.** `PASSWORD=abc #def` is read as `abc`. Put a value
+  that contains ` #` in quotes: `PASSWORD="abc #def"`.
+- **`${NAME}` is replaced with that variable** from the environment or the file, or with nothing when it isn't set.
+- **The `<ID>` in `PROVIDER_<ID>_…` and `AGENT_<ID>_…` is capital letters and digits only.** A line of any other
+  shape is ignored without a word: `PROVIDER_LM_STUDIO_URL` sets up nothing, `PROVIDER_LMSTUDIO_URL` works. If a
+  provider or agent is missing, check its lines first.
+- **Real environment variables win over `.env`.** A variable already set by your shell, a systemd unit or Docker
+  replaces the same line in the file. The Docker image sets `HOST`, `PORT`, `DATA_DIR`, `WORKSPACE_DIR` and
+  `FILES_ROOTS` this way.
+- **`AWL_ENV_FILE` says which file to read.** Without it, `.env` in the folder the server starts in. The install
+  script uses `/etc/agentwebui-lite/.env` and the Docker image `/app/.env`. Relative paths in the file, such as
+  `DATA_DIR=data`, are relative to the folder the server starts in too.
+- **Some values are cut short:** `BRAND_NAME` to 40 characters, `BRAND_GREETING` to 120, `USER_NAME` to 60.
+- **Changes take effect on the next start.**
+
+### Local models
+
+The model picker's **Local models** tab lists the models that run on this server or on your own network. AgentWebUI
+calls a model local only with two pieces of evidence:
+
+1. **Its provider's address leads to this machine or your network.** The host in `PROVIDER_<ID>_URL` is looked up,
+   and each of its addresses is one of:
+   - *this machine*: a loopback address such as `127.0.0.1`, or an address of this server;
+   - *your network*: a private address (`10.…`, `172.16.…`, `192.168.…`, `fd…`, link-local) or a `100.64.0.0/10`
+     address such as Tailscale's, when this server reaches it from an address of the same kind, so it is on that
+     network itself;
+   - *the internet*: anything else, and any address this server has no route to or name that doesn't resolve.
+
+   A name with several addresses counts as its least local one.
+2. **A local engine it recognises answers there:** Ollama, LM Studio, vLLM or llama.cpp's server. Each is recognised
+   by a reply only it gives, with the provider's key sent along.
+
+So a gateway on this machine that forwards to the cloud, such as LiteLLM, is not local, and neither are Ollama's
+cloud models (such as `gpt-oss:120b-cloud`), even through your own Ollama. The check runs in the background when the
+server starts and every five minutes; Settings › Providers › Test all runs it at once. Until it ends, a provider is
+not local. Agents never show under Local models: the app can't see where an agent's model runs.
+
+**Engines it doesn't recognise aren't local until you say so.** LocalAI, Hugging Face TGI, Jan, KoboldCpp, TabbyAPI,
+text-generation-webui and other servers aren't recognised, so their models stay out of Local models even on your own
+machine. That is a gap in coverage, never a false claim: a model is only called local with evidence, or when you say
+so:
+
+```bash
+PROVIDER_LOCALAI_URL=http://127.0.0.1:8080/v1
+PROVIDER_LOCALAI_LOCAL=true
+```
+
+**And the other way:** `PROVIDER_<ID>_LOCAL=false` keeps a provider out of Local models, for example an Ollama
+reached through a proxy on this machine that forwards to another one. The setting wins over the check both ways. It
+takes `true` or `false` (or `yes`/`no`, `on`/`off`, `1`/`0`); anything else stops the server at start.
+
+**Why it says local or not.** Each model's detail panel in the picker, and each provider in Settings › Providers,
+give the reason in one line:
+
+| Reason | What it means |
+|---|---|
+| `Local: Ollama answered at 192.168.1.20 (your network)` | Both pieces of evidence |
+| `Local: marked local in .env` | `PROVIDER_<ID>_LOCAL=true` |
+| `Not local: no known local engine answered at localhost:4000 (this machine)` | The address is local, but no engine it recognises answered: a gateway, or an engine it doesn't know. If the model really runs there, set `PROVIDER_<ID>_LOCAL=true`. |
+| `Not local: api.example.com (203.0.113.7) is on the internet` | The address leads outside this machine and your network |
+| `Not local: gpt-oss:120b-cloud is an Ollama cloud model, served from elsewhere` | Ollama answered, but runs this model somewhere else |
+| `Not local: models.lan: its name did not resolve` | The host couldn't be looked up, so nothing proves it is local |
+| `Not local: marked not local in .env` | `PROVIDER_<ID>_LOCAL=false` |
+
+### If it won't start
+
+A setting it can't work with stops it at once. It prints `agentwebui-lite:` and the reason, and exits with code 2;
+under systemd the reason is in `journalctl -u agentwebui-lite`.
+
+| It says | Do this |
+|---|---|
+| `HOST=0.0.0.0 is reachable from other machines: set PASSWORD in .env` | Set `PASSWORD`, or keep `HOST=127.0.0.1` |
+| `LOGIN_EMAIL is asked for together with PASSWORD, so it needs PASSWORD too` | Set `PASSWORD`, or remove `LOGIN_EMAIL` |
+| `EMBED_SECRET signs browsers in, so it needs PASSWORD too` | Set `PASSWORD`, or remove `EMBED_SECRET` |
+| `EMBED_SECRET is too short: use at least 32 characters` | Make a long one, for example with `openssl rand -hex 32` |
+| `FRAME_ANCESTORS takes full origins like https://app.example.com, not 'app.example.com'` | Write each one with `https://` (or `http://`) |
+| `PROVIDER_<ID>_URL is missing` | Another `PROVIDER_<ID>_…` line is set without its URL: add the URL, or remove the leftover line |
+| `AGENT_<ID>_COMMAND is missing` | The same for an agent: add its command, or remove the leftover line |
+| `PROVIDER_<ID>_LOCAL takes true or false, not '…'` | Write `true` or `false` |
+| `not a number: …` | `PORT` and `UPLOAD_MB` take whole numbers, `AGENT_IDLE_MINUTES` a number |
+
+It can also start but not be reachable. `this server only answers on localhost` means there is no `PASSWORD` and
+the page was opened by another name or address than `localhost` or `127.0.0.1`.
+
+## API
+
+Everything the page does goes through a JSON API that your own scripts can use too: chats, replies streamed as
+server-sent events, files, projects and Git. [docs/API.md](docs/API.md) lists every route, how signing in works, the
+events of a reply, and how a framing site signs `/embed` links.
 
 ## What it does not do
 
