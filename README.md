@@ -34,16 +34,17 @@ No accounts, no setup screen, one <code>.env</code> file.</p>
 
 </div>
 
-Open it and chat. Everything is configured in one `.env` file, so there is no setup screen and there are no accounts.
+AgentWebUI is a self-hosted web app for working with AI. Run it on your own computer or on a server, open it in a
+browser, and chat with:
 
 - **Models:** any OpenAI-compatible API (OpenAI, OpenRouter, NVIDIA, Groq, Ollama, LM Studio, vLLM, …).
-- **Agents:** anything that speaks the [Agent Client Protocol](https://agentclientprotocol.com) over stdio: Claude
-  Code, Codex, Hermes, Pi, Gemini CLI, OpenCode, … Pick the agent, then **its** model and effort, then the folder it
-  works in. It streams its thinking, plan, tool calls and diffs, and asks before it acts.
+- **Agents:** anything that speaks the [Agent Client Protocol](https://agentclientprotocol.com) (ACP) over stdio:
+  Claude Code, Codex, Hermes, Pi, Gemini CLI, OpenCode, … Pick the agent, then **its** model and effort, then the
+  folder it works in. It streams its thinking, plan, tool calls and diffs, and asks before it acts.
 
-The server is about 3,400 lines of Python with one dependency (`aiohttp`) and uses about 40 MB of memory. The web
-client is Preact through htm with no build step. Nothing loads from the internet unless you pick a font other than
-Geist.
+Everything is set in one `.env` file. The server is about 3,400 lines of Python with one dependency (`aiohttp`) and
+uses about 40 MB of memory. The web client is Preact through htm, with no build step. Nothing loads from the internet
+unless you pick a font other than Geist.
 
 <p>
   <img src="docs/screenshots/chat.png" width="49%" alt="A model chat: the reply with its reasoning folded above it">
@@ -58,7 +59,7 @@ Geist.
 
 ## What you can do
 
-| | |
+| Feature | What it does |
 |---|---|
 | **Chat** | Stream replies with reasoning; edit a sent message or regenerate, and flip between versions (‹ 2 / 3 ›); branch into a new chat from any reply; pin, archive, clone, export (Markdown or JSON); search everything with ⌘K. |
 | **Temporary chat** | A chat that is never written to disk, never listed, and gone when you leave it. |
@@ -74,7 +75,7 @@ Geist.
 
 ## Choose how to run it
 
-| | Good for | You need |
+| Where | Good for | You need |
 |---|---|---|
 | [On your computer](#run-it-on-your-computer) | Trying it, or using it on one machine | macOS or Linux, Python 3.11+, Git |
 | [Install script](#install-script-systemd) | A server of your own, without containers | Ubuntu 22.04+ or Debian 12+, a DNS name for HTTPS |
@@ -94,10 +95,10 @@ cp .env.example .env        # then turn on a model provider or an agent (below)
 .venv/bin/agentwebui        # http://127.0.0.1:3000
 ```
 
-Start it from this folder: it reads `.env` from the folder it starts in, and keeps its data in `data/` there. Stop
-it with Ctrl+C. Without `PASSWORD` it answers only on this computer, so there is nothing to sign in to.
+Start it from this folder: it reads `.env` from the folder it starts in and keeps its data in `data/` there. Stop it
+with Ctrl+C. Without `PASSWORD` it answers only on this computer, so there is nothing to sign in to.
 
-**A model.** In `.env`, take the `#` off a provider's lines. A model on your computer through
+**Add a model.** In `.env`, take the `#` off a provider's lines. A model on your computer through
 [Ollama](https://ollama.com) needs no key:
 
 ```bash
@@ -105,10 +106,10 @@ PROVIDER_OLLAMA_URL=http://127.0.0.1:11434/v1
 ```
 
 A cloud API needs its key, for example `PROVIDER_OPENROUTER_URL=https://openrouter.ai/api/v1` and
-`PROVIDER_OPENROUTER_KEY=sk-or-…`. The page lists what the provider's `/models` reports.
+`PROVIDER_OPENROUTER_KEY=sk-or-…`. The page lists the models the provider's `/models` reports.
 
-**An agent.** Agents are programs you install and sign in to yourself; AgentWebUI starts them when a chat needs one.
-For Claude Code, install [Node.js](https://nodejs.org) (the adapter runs through `npx`), then sign in once in a
+**Add an agent.** Agents are programs you install and sign in to yourself; AgentWebUI starts them when a chat needs
+one. For Claude Code, install [Node.js](https://nodejs.org) (the adapter runs through `npx`), then sign in once in a
 terminal:
 
 ```bash
@@ -122,8 +123,8 @@ and add to `.env`:
 AGENT_CLAUDE_COMMAND=npx -y @agentclientprotocol/claude-agent-acp
 ```
 
-Codex is the same with `npm install -g @openai/codex` and `codex login`. [Agent setup](#agent-setup) has every agent.
-An agent runs as you, with its own sign-in, so it must be signed in for the user that starts AgentWebUI.
+Codex is the same with `npm install -g @openai/codex` and `codex login`. [Agent setup](#agent-setup) covers every
+agent. An agent runs as you, with its own sign-in, so it must be signed in for the user that starts AgentWebUI.
 
 **Where agents work.** Without `WORKSPACE_DIR`, a new agent chat starts in your home folder. Without `FILES_ROOTS`,
 the Files page shows `WORKSPACE_DIR` (or your home folder) and each agent's `AGENT_<ID>_CWD`, and agent chats may only
@@ -132,16 +133,16 @@ that folder. It doesn't fence the agent in: an agent you allow to run commands c
 
 **Check that it started.** It logs what it found, then the address:
 
-```
+```text
 INFO 1 model provider(s), 1 agent(s); data in /home/you/AgentWebUI/data
 INFO open http://127.0.0.1:3000
 ```
 
 `WARNING nothing to chat with yet` means no `PROVIDER_*` or `AGENT_*` line was read; check
 [How `.env` is read](#how-env-is-read). If it stops at once with `agentwebui: …`, see
-[If it won't start](#if-it-wont-start). After you change `.env`, stop and start it again.
+[If it won't start](#if-it-wont-start). After you change `.env`, stop it and start it again.
 
-**Update** from the same folder, then start it again:
+**Update.** From the same folder, pull and reinstall, then start it again:
 
 ```bash
 git pull && .venv/bin/pip install -e .
@@ -151,7 +152,7 @@ To work on AgentWebUI itself, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Put it on a VPS
 
-Two ways; both end with the app behind Caddy on HTTPS. Point a DNS name at the server first.
+There are two ways, and both end with the app behind Caddy on HTTPS. Point a DNS name at the server first.
 
 ### Install script (systemd)
 
@@ -162,10 +163,15 @@ git clone https://github.com/HackersHostel/AgentWebUI.git && cd AgentWebUI
 sudo DOMAIN=chat.example.com ./deploy/install.sh
 ```
 
-It creates an `agentwebui` user, installs the app in `/opt/agentwebui`, Claude Code and Codex with their ACP
-adapters (`AGENTS=claude,codex`, or `AGENTS=` for none), writes `/etc/agentwebui/.env` with a new password,
-starts the `agentwebui` service, puts Caddy in front for HTTPS (with streaming left unbuffered), and adds a daily
-backup. It prints the address and the password. Then sign the agents in once, as the app's user:
+The script:
+
+- creates an `agentwebui` user and installs the app in `/opt/agentwebui`;
+- installs Claude Code and Codex with their ACP adapters (`AGENTS=claude,codex`, or `AGENTS=` for none);
+- writes `/etc/agentwebui/.env` with a new password and starts the `agentwebui` service;
+- puts Caddy in front for HTTPS, with streaming left unbuffered;
+- adds a daily backup, and prints the address and the password.
+
+Then sign the agents in once, as the app's user:
 
 ```bash
 sudo -iu agentwebui claude                     # then /login
@@ -173,12 +179,15 @@ sudo -iu agentwebui codex login --device-auth
 ```
 
 Agents work in `/home/agentwebui/work` (`FILES_ROOTS`). Clone your repositories there from the Files page, or with
-`sudo -iu agentwebui git clone …`. For pushing, give that user a deploy key: `sudo -iu agentwebui ssh-keygen -t
-ed25519`, and add the public key to the repository. Run the script again to update.
+`sudo -iu agentwebui git clone …`. To push, give that user a deploy key with
+`sudo -iu agentwebui ssh-keygen -t ed25519` and add the public key to the repository.
 
-Change settings in `/etc/agentwebui/.env`, then `sudo systemctl restart agentwebui`. Logs:
-`journalctl -u agentwebui -f`. Without `DOMAIN` the app answers only on `127.0.0.1`; reach it with
-`ssh -L 3000:127.0.0.1:3000 your-server` or Tailscale.
+| To | Do this |
+|---|---|
+| Change a setting | Edit `/etc/agentwebui/.env`, then `sudo systemctl restart agentwebui` |
+| Read the logs | `journalctl -u agentwebui -f` |
+| Update | Run the script again |
+| Reach it without `DOMAIN` | It answers only on `127.0.0.1`: use `ssh -L 3000:127.0.0.1:3000 your-server` or Tailscale |
 
 A server set up with version 0.3.0 or earlier keeps its settings and data in other folders: move them as the
 [changelog](CHANGELOG.md#unreleased) describes before you run the script again.
@@ -193,28 +202,31 @@ The image is published as `ghcr.io/hackershostel/agentwebui`, for amd64 and arm6
 | `slim`, `X.Y.Z-slim`, `X.Y-slim` | The same without agents or Node.js: model providers only, and much smaller |
 | `edge`, `edge-slim` | The newest `main`, rebuilt on every merge |
 
-With Caddy in front for HTTPS, using the compose file in this repository:
+With Caddy in front for HTTPS, using the compose file in this repository. Set `PASSWORD` and your providers in `.env`;
+the agents are already installed in the image.
 
 ```bash
-cp .env.example .env    # set PASSWORD and your providers; agents are already installed in the image
+cp .env.example .env
 mkdir -p work
-DOMAIN=chat.example.com docker compose up -d   # pulls the image; add --build to build this checkout instead
-docker compose exec app claude                  # sign Claude Code in once
+DOMAIN=chat.example.com docker compose up -d   # pulls the image; add --build to build this checkout
+docker compose exec app claude                 # sign Claude Code in once
 docker compose exec app codex login --device-auth
 ```
 
-Set `AGENTWEBUI_TAG=slim` (or a version, or `edge`) to run another tag. Update with `docker compose pull && docker
-compose up -d`, or, if you build this checkout, `git pull && docker compose up -d --build`. Data lives in the `data`
-volume, the agents' sign-ins in `home`, and your projects in `./work`.
+Set `AGENTWEBUI_TAG=slim` (or a version, or `edge`) to run another tag. Update with
+`docker compose pull && docker compose up -d`, or, if you build this checkout, with
+`git pull && docker compose up -d --build`. Data lives in the `data` volume, the agents' sign-ins in `home`, and your
+projects in `./work`.
 
-To try it on your own computer without Caddy:
+To try it on your own computer without Caddy, set `PASSWORD` in `.env` first: the container listens on all of its
+addresses.
 
 ```bash
-cp .env.example .env && mkdir -p work   # set PASSWORD: the container listens on all of its addresses
+cp .env.example .env && mkdir -p work
 docker run -d --name agentwebui -p 127.0.0.1:3000:3000 -v "$PWD/.env:/app/.env:ro" \
   -v agentwebui-data:/data -v agentwebui-home:/home/agentwebui -v "$PWD/work:/work" \
-  ghcr.io/hackershostel/agentwebui              # then open http://127.0.0.1:3000
-docker exec -it agentwebui claude               # sign Claude Code in once
+  ghcr.io/hackershostel/agentwebui      # then open http://127.0.0.1:3000
+docker exec -it agentwebui claude       # sign Claude Code in once
 ```
 
 The image sets `HOST`, `PORT`, `DATA_DIR`, `WORKSPACE_DIR` and `FILES_ROOTS` for the container, and those win over the
@@ -222,38 +234,47 @@ same lines in the mounted `.env`. Set `TRUST_PROXY=true` only when a proxy sits 
 
 ### Keep it safe
 
-Whoever has the password can make an agent run commands on the server, as the app's user. Use a long password (the
-install script makes one), keep `FILES_ROOTS` narrow, and consider putting the page behind Tailscale or Cloudflare
-Access. Wrong passwords are limited to 8 per address per 10 minutes. Uploaded and agent-written files are served
-sandboxed, so an HTML or SVG file can't run as the page.
+Whoever has the password can make an agent run commands on the server, as the app's user.
+
+- Use a long password (the install script makes one) and keep `FILES_ROOTS` narrow.
+- Consider putting the page behind Tailscale or Cloudflare Access.
+- Wrong passwords are limited to 8 per address per 10 minutes.
+- Uploaded and agent-written files are served sandboxed, so an HTML or SVG file can't run as the page.
+
+To report a security problem, follow [SECURITY.md](SECURITY.md).
 
 ## Data and backups
 
-Everything AgentWebUI keeps is in `DATA_DIR`: `data/` in the folder it starts in, `/var/lib/agentwebui` with
-the install script, and the `data` volume (`/data` inside the container) with Docker.
+Everything AgentWebUI keeps is in `DATA_DIR`: `data/` in the folder it starts in, `/var/lib/agentwebui` with the
+install script, and the `data` volume (`/data` inside the container) with Docker.
 
-| | |
+| Path | What it holds |
 |---|---|
 | `chats.db` | Chats, messages, projects, the names of attached files, and the agents' cached options, in SQLite. While the server runs, `chats.db-wal` and `chats.db-shm` sit beside it; they are part of the database. |
-| `files/` | The attachments and uploads themselves, and the images and files agents send into a chat |
+| `files/` | The attachments and uploads themselves, and the images and files agents send into a chat. |
 | `secret.key` | Signs the sign-in cookie (with `PASSWORD`). Losing it, or changing `PASSWORD`, signs every browser out. |
-| `backups/` | Copies made by `agentwebui backup` |
+| `backups/` | Copies made by `agentwebui backup`. |
 
 Temporary chats are never written here, and files an agent writes in its folder stay in that folder.
 
-`agentwebui backup [FILE]` writes a consistent copy of `chats.db` while the server runs (to
-`DATA_DIR/backups/` by default). **It copies only `chats.db`**: back up `files/` and `secret.key` as well, with your
-usual tools. Files in `files/` are written once and never changed, so a plain copy is safe while the server runs.
-Run the command with the same `.env` as the server: from the same folder, or with `AWL_ENV_FILE` (below). With
-Docker, `docker compose exec app agentwebui backup` writes to `/data/backups`.
+### Back up
 
-The install script adds a daily cron job that keeps the 14 newest copies; for other setups, add this line yourself:
+`agentwebui backup [FILE]` writes a consistent copy of `chats.db` while the server runs (to `DATA_DIR/backups/` by
+default). **It copies only `chats.db`**: back up `files/` and `secret.key` as well, with your usual tools. Files in
+`files/` are written once and never changed, so a plain copy is safe while the server runs.
 
-```
+Run the command with the same `.env` as the server: from the same folder, or with `AWL_ENV_FILE`
+([How `.env` is read](#how-env-is-read)). With Docker, `docker compose exec app agentwebui backup` writes to
+`/data/backups`.
+
+The install script adds a daily cron job that keeps the 14 newest copies. For other setups, add this line to a file
+in `/etc/cron.d`:
+
+```text
 17 3 * * * agentwebui cd /var/lib/agentwebui && AWL_ENV_FILE=/etc/agentwebui/.env /opt/agentwebui/.venv/bin/agentwebui backup
 ```
 
-To restore a backup:
+### Restore
 
 1. Stop the server: Ctrl+C, `sudo systemctl stop agentwebui`, or `docker compose stop app`.
 2. In `DATA_DIR`, move `chats.db` out of the way **together with** any `chats.db-wal` and `chats.db-shm` beside it.
@@ -261,7 +282,7 @@ To restore a backup:
    next to the backup.
 3. Copy the backup in as `chats.db`. If you backed up `files/`, put it back too; an attachment whose file is missing
    shows as not found.
-4. Start the server again and check your chats are there.
+4. Start the server again and check that your chats are there.
 
 On your computer, from the AgentWebUI folder, with the server stopped:
 
@@ -273,7 +294,8 @@ With the install script:
 
 ```bash
 sudo systemctl stop agentwebui
-sudo -u agentwebui sh -c 'cd /var/lib/agentwebui && mkdir -p before-restore && mv chats.db* before-restore/ && cp backups/chats-20261025-031700.db chats.db'
+sudo -u agentwebui sh -c 'cd /var/lib/agentwebui && mkdir -p before-restore &&
+  mv chats.db* before-restore/ && cp backups/chats-20261025-031700.db chats.db'
 sudo systemctl start agentwebui
 ```
 
@@ -281,13 +303,15 @@ With Docker:
 
 ```bash
 docker compose stop app
-docker compose run --rm --no-deps app sh -c 'cd /data && mkdir -p before-restore && mv chats.db* before-restore/ && cp backups/chats-20261025-031700.db chats.db'
+docker compose run --rm --no-deps app sh -c 'cd /data && mkdir -p before-restore &&
+  mv chats.db* before-restore/ && cp backups/chats-20261025-031700.db chats.db'
 docker compose start app
 ```
 
 ## Configure
 
-Every setting is in [`.env.example`](.env.example). A value may name a variable from your shell as `${NAME}`.
+Every setting is in [`.env.example`](.env.example), with a one-line comment. A value may name a variable from your
+shell as `${NAME}`.
 
 ```bash
 PROVIDER_OPENROUTER_URL=https://openrouter.ai/api/v1
@@ -406,8 +430,8 @@ give the reason in one line:
 
 ### If it won't start
 
-A setting it can't work with stops it at once. It prints `agentwebui:` and the reason, and exits with code 2;
-under systemd the reason is in `journalctl -u agentwebui`.
+A setting it can't work with stops it at once. It prints `agentwebui:` and the reason, and exits with code 2; under
+systemd the reason is in `journalctl -u agentwebui`.
 
 | It says | Do this |
 |---|---|
@@ -437,7 +461,7 @@ terminal and no web search of its own. Agents bring their own tools, memory, MCP
 
 ## Keyboard shortcuts
 
-| | |
+| Shortcut | Action |
 |---|---|
 | `⌘N` / `Ctrl+N` | New chat |
 | `⌘K` | Search chats, actions and settings |
@@ -452,13 +476,18 @@ terminal and no web search of its own. Agents bring their own tools, memory, MCP
 
 ## Help and contributing
 
-[SUPPORT.md](SUPPORT.md) says where to ask what. Questions go to [Q&A](https://github.com/HackersHostel/AgentWebUI/discussions/categories/q-a), ideas to
-[Ideas](https://github.com/HackersHostel/AgentWebUI/discussions/categories/ideas), and bugs to
-[issues](https://github.com/HackersHostel/AgentWebUI/issues/new/choose). Before your first pull request, read
-[CONTRIBUTING.md](CONTRIBUTING.md): it covers setup, the rules that keep AgentWebUI small, and testing. Report security
-problems privately, as [SECURITY.md](SECURITY.md) describes. Everyone taking part follows the
-[Code of Conduct](CODE_OF_CONDUCT.md). What changed in each version is in [CHANGELOG.md](CHANGELOG.md).
+| For | Go to |
+|---|---|
+| Questions about setup and configuration | [Q&A](https://github.com/HackersHostel/AgentWebUI/discussions/categories/q-a) |
+| Ideas | [Ideas](https://github.com/HackersHostel/AgentWebUI/discussions/categories/ideas) |
+| Bugs, and agents or providers that don't work | [Issues](https://github.com/HackersHostel/AgentWebUI/issues/new/choose) |
+| Security problems | Report them privately, as [SECURITY.md](SECURITY.md) describes |
+
+[SUPPORT.md](SUPPORT.md) has more on where to ask what. Before your first pull request, read
+[CONTRIBUTING.md](CONTRIBUTING.md): it covers setup, the rules that keep AgentWebUI small, and testing. Everyone taking
+part follows the [Code of Conduct](CODE_OF_CONDUCT.md). What changed in each version is in
+[CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
-MIT. Copyright (c) 2026 HackersHostel. See the [LICENSE](LICENSE).
+AgentWebUI is released under the [MIT License](LICENSE). Copyright (c) 2026 HackersHostel.
