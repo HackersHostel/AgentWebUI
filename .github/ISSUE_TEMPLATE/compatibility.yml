@@ -70,7 +70,7 @@ body:
     id: version
     attributes:
       label: AgentWebUI commit or version
-      description: "`git rev-parse --short HEAD` in your clone, or the version from `agentwebui_lite/__init__.py`."
+      description: "`git rev-parse --short HEAD` in your clone, or the version from `agentwebui/__init__.py`."
       placeholder: c0e7341
     validations:
       required: true

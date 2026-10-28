@@ -9,9 +9,9 @@ import aiohttp
 import pytest
 from aiohttp import web
 
-from agentwebui_lite import locality
-from agentwebui_lite.config import ConfigError, Provider, load
-from agentwebui_lite.locality import Locality, classify, least_local
+from agentwebui import locality
+from agentwebui.config import ConfigError, Provider, load
+from agentwebui.locality import Locality, classify, least_local
 
 A = ipaddress.ip_address
 
@@ -254,7 +254,7 @@ async def test_config_never_waits_on_a_check(tmp_path, client_for, monkeypatch):
 
 
 async def test_config_reports_the_endpoint_engine_and_why_of_each_model(tmp_path, client_for, aiohttp_server):
-    from agentwebui_lite.server import PROVIDERS
+    from agentwebui.server import PROVIDERS
     from .conftest import make_settings
     ollama = await aiohttp_server(engine_app("ollama"))
     gateway = await aiohttp_server(engine_app("gateway"))

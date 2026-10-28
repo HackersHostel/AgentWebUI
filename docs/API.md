@@ -1,7 +1,7 @@
 # HTTP API
 
 The web page talks to the server through this API, and so can your own scripts. It is JSON over HTTP, and a reply
-streams back as [server-sent events](#replies-as-server-sent-events). The routes are in `agentwebui_lite/server.py`.
+streams back as [server-sent events](#replies-as-server-sent-events). The routes are in `agentwebui/server.py`.
 
 The API follows the app, not a version number: a release can change it, and the [changelog](../CHANGELOG.md) says
 when one does.

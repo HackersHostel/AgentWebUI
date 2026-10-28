@@ -1,4 +1,4 @@
-// Projects (Project board, Lite version): a folder on the server, a default agent or model, and standing
+// Projects (Project board): a folder on the server, a default agent or model, and standing
 // instructions. Chats are grouped under their project in the sidebar.
 import { html, useState, store, useStore, cx, basename } from './lib.js';
 import { Icon } from './icons.js';

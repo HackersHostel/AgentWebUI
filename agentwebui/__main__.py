@@ -1,5 +1,5 @@
-"""`python -m agentwebui_lite` or `agentwebui-lite`: read .env and serve.
-`agentwebui-lite backup [FILE]` writes a consistent copy of the chats database, safe while the server runs."""
+"""`python -m agentwebui` or `agentwebui`: read .env and serve.
+`agentwebui backup [FILE]` writes a consistent copy of the chats database, safe while the server runs."""
 from __future__ import annotations
 
 import logging
@@ -21,14 +21,14 @@ def main(argv: list[str] | None = None) -> int:
     try:
         settings = config.load()
     except config.ConfigError as exc:
-        print(f"agentwebui-lite: {exc}", file=sys.stderr)
+        print(f"agentwebui: {exc}", file=sys.stderr)
         return 2
     if args[:1] == ["backup"]:
         return backup(settings, args[1] if len(args) > 1 else "")
     if args:
-        print("usage: agentwebui-lite [backup [FILE]]", file=sys.stderr)
+        print("usage: agentwebui [backup [FILE]]", file=sys.stderr)
         return 2
-    log = logging.getLogger("agentwebui_lite")
+    log = logging.getLogger("agentwebui")
     log.info("%d model provider(s), %d agent(s); data in %s", len(settings.providers), len(settings.agents),
              settings.data_dir.resolve())
     if not settings.providers and not settings.agents:
@@ -42,7 +42,7 @@ def main(argv: list[str] | None = None) -> int:
 def backup(settings: config.Settings, target: str) -> int:
     source = settings.data_dir / "chats.db"
     if not source.is_file():
-        print(f"agentwebui-lite: no database at {source}", file=sys.stderr)
+        print(f"agentwebui: no database at {source}", file=sys.stderr)
         return 1
     path = Path(target or settings.data_dir / "backups" / f"chats-{time.strftime('%Y%m%d-%H%M%S')}.db")
     path.parent.mkdir(parents=True, exist_ok=True)

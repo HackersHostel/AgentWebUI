@@ -3,9 +3,9 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agentwebui-lite"
-dynamic = ["version"]  # agentwebui_lite.__version__
-description = "A light web interface for AI models and command-line agents."
+name = "agentwebui"
+dynamic = ["version"]  # agentwebui.__version__
+description = "Chat with AI models and command-line agents from one small web page, on your own server."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -21,16 +21,16 @@ dev = ["pytest>=8", "pytest-aiohttp>=1.0"]
 Source = "https://github.com/HackersHostel/AgentWebUI"
 
 [project.scripts]
-agentwebui-lite = "agentwebui_lite.__main__:main"
+agentwebui = "agentwebui.__main__:main"
 
 [tool.setuptools.packages.find]
-include = ["agentwebui_lite*"]
+include = ["agentwebui*"]
 
 [tool.setuptools.dynamic]
-version = { attr = "agentwebui_lite.__version__" }
+version = { attr = "agentwebui.__version__" }
 
 [tool.setuptools.package-data]
-agentwebui_lite = ["static/**/*"]
+agentwebui = ["static/**/*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

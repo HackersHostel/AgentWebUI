@@ -7,10 +7,10 @@ import sys
 
 import pytest
 
-from agentwebui_lite import config
-from agentwebui_lite.acp import AgentProcess, RpcError, Session
-from agentwebui_lite.server import AGENTS, SETTINGS
-from agentwebui_lite.config import Agent
+from agentwebui import config
+from agentwebui.acp import AgentProcess, RpcError, Session
+from agentwebui.server import AGENTS, SETTINGS
+from agentwebui.config import Agent
 
 from .conftest import events
 
@@ -264,7 +264,7 @@ async def test_an_agent_mode_can_be_changed(settings_for, client_for, monkeypatc
 async def test_config_describes_providers_agents_and_the_user(tmp_path, client_for, fake_openai):
     from .conftest import make_settings
     client = await client_for(make_settings(tmp_path, fake_openai=fake_openai, user_name="Labib"))
-    from agentwebui_lite.server import PROVIDERS
+    from agentwebui.server import PROVIDERS
     await client.server.app[PROVIDERS].locality.check_all()
     body = await (await client.get("/api/config")).json()
     assert body["user_name"] == "Labib"
@@ -277,7 +277,7 @@ async def test_config_describes_providers_agents_and_the_user(tmp_path, client_f
 
 
 async def test_a_provider_with_listed_models_is_still_checked(tmp_path, client_for, fake_openai):
-    from agentwebui_lite.config import Provider
+    from agentwebui.config import Provider
     from .conftest import make_settings
     settings = make_settings(tmp_path)
     listed = Provider("listed", "Listed", str(fake_openai.make_url("/v1")).rstrip("/"), "", ("only-this",))
@@ -727,7 +727,7 @@ async def test_git_status_commit_branches_and_log_run_through_git(settings_for, 
 # --- running on a server ---
 async def test_wrong_passwords_are_limited(settings_for, client_for):
     client = await client_for(settings_for(password="secret"))
-    from agentwebui_lite import server
+    from agentwebui import server
     server.LOGIN_TRIES = 2
     try:
         for _ in range(2):
@@ -785,7 +785,7 @@ async def test_the_page_loads_the_client_from_an_address_that_changes_with_it(se
 
 
 async def test_every_logo_the_client_names_is_served(settings_for, client_for):
-    from agentwebui_lite.server import STATIC
+    from agentwebui.server import STATIC
     client = await client_for(settings_for())
     names = re.findall(r"'([\w-]+\.(?:svg|png))'", (STATIC / "js" / "logos.js").read_text())
     assert len(names) >= 19
@@ -816,7 +816,7 @@ async def test_a_webhook_hears_when_a_reply_finishes(settings_for, client_for, f
 
 def test_an_older_database_gains_versions_and_settings(tmp_path):
     import sqlite3
-    from agentwebui_lite.store import Store
+    from agentwebui.store import Store
     path = tmp_path / "old.db"
     db = sqlite3.connect(path)
     db.executescript("""
@@ -841,8 +841,8 @@ def test_an_older_database_gains_versions_and_settings(tmp_path):
 
 
 def test_the_backup_command_copies_the_database(tmp_path, monkeypatch):
-    from agentwebui_lite.__main__ import main
-    from agentwebui_lite.store import Store
+    from agentwebui.__main__ import main
+    from agentwebui.store import Store
     monkeypatch.setenv("AWL_ENV_FILE", str(tmp_path / "none.env"))
     monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
     Store(tmp_path / "data" / "chats.db").create_chat("model", "p/m", title="Keep me")
@@ -852,7 +852,7 @@ def test_the_backup_command_copies_the_database(tmp_path, monkeypatch):
 
 
 def test_a_file_link_from_an_agent_is_only_ever_a_web_or_local_address():
-    from agentwebui_lite.turns import Turn
+    from agentwebui.turns import Turn
     turn = Turn("c")
     turn.add_media({"type": "resource_link", "uri": "javascript:alert(1)", "name": "x"})
     turn.add_media({"type": "resource_link", "uri": "https://example.com/a.pdf", "name": "a.pdf"})

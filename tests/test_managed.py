@@ -6,8 +6,8 @@ import dataclasses
 
 import pytest
 
-from agentwebui_lite import config
-from agentwebui_lite.server import embed_link_token
+from agentwebui import config
+from agentwebui.server import embed_link_token
 
 from .conftest import events
 

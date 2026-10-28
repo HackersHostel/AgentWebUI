@@ -26,7 +26,7 @@ from .providers import ProviderError, Providers
 from .store import Store
 from .turns import Turn
 
-log = logging.getLogger("agentwebui_lite")
+log = logging.getLogger("agentwebui")
 STATIC = Path(__file__).parent / "static"
 COOKIE = "awl_session"
 CANCEL_GRACE = 15
@@ -302,7 +302,7 @@ async def index(request: web.Request) -> web.Response:
     the page is marked so the client shows that logo instead of the one in each theme's ink."""
     settings = request.app[SETTINGS]
     page = (STATIC / "index.html").read_text(encoding="utf-8")
-    page = page.replace("<title>AgentWebUI Lite</title>", f"<title>{_html(settings.brand_name)}</title>")
+    page = page.replace("<title>AgentWebUI</title>", f"<title>{_html(settings.brand_name)}</title>")
     if settings.brand_logo:
         page = page.replace('<html lang="en" class="app">', '<html lang="en" class="app" data-own-logo>')
     page = page.replace('"/assets/', f'"/assets/{request.app[ASSETS]}/')

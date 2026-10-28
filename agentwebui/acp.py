@@ -20,7 +20,7 @@ from . import __version__
 from .config import Agent
 from .turns import Turn
 
-log = logging.getLogger("agentwebui_lite")
+log = logging.getLogger("agentwebui")
 MAX_LINE = 10 * 1024 * 1024
 PROTOCOL_VERSION = 1
 
@@ -303,7 +303,7 @@ class AgentProcess:
                 result = await self.rpc.request("initialize", {
                     "protocolVersion": PROTOCOL_VERSION,
                     "clientCapabilities": {"fs": {"readTextFile": True, "writeTextFile": True}, "terminal": False},
-                    "clientInfo": {"name": "agentwebui-lite", "version": __version__}}, timeout=60)
+                    "clientInfo": {"name": "agentwebui", "version": __version__}}, timeout=60)
             except (RpcError, TimeoutError) as exc:
                 await self.stop()
                 raise AgentError(self._why(exc)) from None

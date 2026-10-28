@@ -1,5 +1,5 @@
 # Build the Docker image and publish it to GitHub's registry as ghcr.io/hackershostel/agentwebui, for amd64 and
-# arm64. A version tag (`git tag v0.3.0 && git push origin v0.3.0`, matching agentwebui_lite.__version__) publishes
+# arm64. A version tag (`git tag v0.3.0 && git push origin v0.3.0`, matching agentwebui.__version__) publishes
 # 0.3.0, 0.3 and latest; every push to main publishes edge. Each comes again with -slim (slim for latest): the image
 # without Claude Code, Codex and Node.js. A pull request that touches the image only builds it, for amd64.
 name: Docker
@@ -39,7 +39,7 @@ jobs:
       - name: Check the tag matches the version
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          version=$(python3 -c 'import agentwebui_lite; print(agentwebui_lite.__version__)')
+          version=$(python3 -c 'import agentwebui; print(agentwebui.__version__)')
           if [ "v$version" != "$GITHUB_REF_NAME" ]; then
             echo "Tag $GITHUB_REF_NAME does not match version $version" >&2
             exit 1
