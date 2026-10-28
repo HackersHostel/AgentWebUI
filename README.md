@@ -34,7 +34,7 @@ No accounts, no setup screen, one <code>.env</code> file.</p>
 
 </div>
 
-Open it and chat: there is no setup screen and no accounts. Everything is configured in `.env`.
+Open it and chat. Everything is configured in one `.env` file, so there is no setup screen and there are no accounts.
 
 - **Models:** any OpenAI-compatible API (OpenAI, OpenRouter, NVIDIA, Groq, Ollama, LM Studio, vLLM, …).
 - **Agents:** anything that speaks the [Agent Client Protocol](https://agentclientprotocol.com) over stdio: Claude
@@ -49,6 +49,12 @@ Geist.
   <img src="docs/screenshots/chat.png" width="49%" alt="A model chat: the reply with its reasoning folded above it">
   <img src="docs/screenshots/files-and-git.png" width="49%" alt="Files and Git: a folder, a file open, and the changed files ready to commit">
 </p>
+
+**Contents:** [What you can do](#what-you-can-do) · [Choose how to run it](#choose-how-to-run-it) ·
+[Run it on your computer](#run-it-on-your-computer) · [Put it on a VPS](#put-it-on-a-vps) ·
+[Data and backups](#data-and-backups) · [Configure](#configure) · [API](#api) ·
+[What it does not do](#what-it-does-not-do) · [Keyboard shortcuts](#keyboard-shortcuts) ·
+[Help and contributing](#help-and-contributing) · [License](#license)
 
 ## What you can do
 
@@ -65,6 +71,17 @@ Geist.
 | **Voice** | Dictate into the message box, have replies read aloud, or talk hands-free in voice mode. It is the browser's own speech: audio never reaches the server. |
 | **Notifications** | In-app and browser notifications when a reply finishes, fails or waits for you, and an optional webhook (Slack, Teams, ntfy, …) that works with every tab closed. |
 | **Your brand** | Name, logo, greeting, theme and accent from `.env`; the page installs as an app on a phone or desktop. |
+
+## Choose how to run it
+
+| | Good for | You need |
+|---|---|---|
+| [On your computer](#run-it-on-your-computer) | Trying it, or using it on one machine | macOS or Linux, Python 3.11+, Git |
+| [Install script](#install-script-systemd) | A server of your own, without containers | Ubuntu 22.04+ or Debian 12+, a DNS name for HTTPS |
+| [Docker](#docker) | Any host that runs Docker, amd64 or arm64 | Docker with Compose, a DNS name for HTTPS |
+
+All three take the same `.env` settings and keep the same files in `DATA_DIR`, so moving from one to another is a
+matter of copying `.env` and that folder.
 
 ## Run it on your computer
 
@@ -433,9 +450,9 @@ terminal and no web search of its own. Agents bring their own tools, memory, MCP
 | `Esc` | Stop the reply, or close the top layer |
 | `?` | All shortcuts |
 
-## Contributing
+## Help and contributing
 
-Questions go to [Q&A](https://github.com/HackersHostel/AgentWebUI/discussions/categories/q-a), ideas to
+[SUPPORT.md](SUPPORT.md) says where to ask what. Questions go to [Q&A](https://github.com/HackersHostel/AgentWebUI/discussions/categories/q-a), ideas to
 [Ideas](https://github.com/HackersHostel/AgentWebUI/discussions/categories/ideas), and bugs to
 [issues](https://github.com/HackersHostel/AgentWebUI/issues/new/choose). Before your first pull request, read
 [CONTRIBUTING.md](CONTRIBUTING.md): it covers setup, the rules that keep AgentWebUI small, and testing. Report security
