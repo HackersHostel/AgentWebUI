@@ -35,31 +35,28 @@ fake OpenAI-compatible server and a scripted ACP agent.
 git clone https://github.com/<you>/AgentWebUI.git && cd AgentWebUI
 python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 cp .env.example .env          # turn on a provider or an agent to chat by hand
-.venv/bin/agentwebui-lite     # http://127.0.0.1:3000
+.venv/bin/agentwebui          # http://127.0.0.1:3000
 ```
 
 To chat by hand without a paid key, point `PROVIDER_OLLAMA_URL` or `PROVIDER_LMSTUDIO_URL` at a local model. Claude
 Code and Codex start through `npx`, so they need Node.js and must already be signed in on your machine.
 
-The server reads the files under `agentwebui_lite/static/` on each request, so a browser reload picks up client
+The server reads the files under `agentwebui/static/` on each request, so a browser reload picks up client
 changes. Restart the server after changing Python or `.env`.
-
-**Naming:** AgentWebUI is the product. The Python package, the command, the service and the install paths are still
-called `agentwebui-lite`.
 
 ## Where things are
 
 | Path | What it is |
 |---|---|
-| `agentwebui_lite/server.py` | The HTTP API, the page, sign-in, and replies streamed as server-sent events |
-| `agentwebui_lite/acp.py` | The Agent Client Protocol client: JSON-RPC over an agent's stdio |
-| `agentwebui_lite/providers.py` | Any OpenAI-compatible chat completions API |
-| `agentwebui_lite/turns.py` | One reply in progress, replayed to every viewer so a reload picks the stream back up |
-| `agentwebui_lite/store.py` | Chats, messages, files and projects in one SQLite file |
-| `agentwebui_lite/workspace.py` | Files and Git under `FILES_ROOTS` |
-| `agentwebui_lite/config.py` | Settings from the environment and `.env` |
-| `agentwebui_lite/__main__.py` | The `agentwebui-lite` command: serve, or `backup` |
-| `agentwebui_lite/static/` | The web client: `index.html`, `js/` (Preact through htm, no build step), `css/tokens.css` (the design tokens) |
+| `agentwebui/server.py` | The HTTP API, the page, sign-in, and replies streamed as server-sent events |
+| `agentwebui/acp.py` | The Agent Client Protocol client: JSON-RPC over an agent's stdio |
+| `agentwebui/providers.py` | Any OpenAI-compatible chat completions API |
+| `agentwebui/turns.py` | One reply in progress, replayed to every viewer so a reload picks the stream back up |
+| `agentwebui/store.py` | Chats, messages, files and projects in one SQLite file |
+| `agentwebui/workspace.py` | Files and Git under `FILES_ROOTS` |
+| `agentwebui/config.py` | Settings from the environment and `.env` |
+| `agentwebui/__main__.py` | The `agentwebui` command: serve, or `backup` |
+| `agentwebui/static/` | The web client: `index.html`, `js/` (Preact through htm, no build step), `css/tokens.css` (the design tokens) |
 | `tests/` | `conftest.py` (a fake OpenAI server and app fixtures) and `fake_agent.py` (a scripted ACP agent) |
 | `deploy/`, `Dockerfile`, `docker-compose.yml` | The VPS install script with systemd and Caddy, and the Docker setup |
 | `docs/` | `API.md` (the HTTP API and its events) and the README's screenshots |
@@ -122,7 +119,7 @@ There's an [`.editorconfig`](.editorconfig) so most editors pick up the indentat
 
 ## Releases
 
-Maintainers bump `__version__` in `agentwebui_lite/__init__.py`, move the *Unreleased* changelog entries under the new
+Maintainers bump `__version__` in `agentwebui/__init__.py`, move the *Unreleased* changelog entries under the new
 version, and tag the merge commit `vX.Y.Z`. The tag publishes the Docker images `X.Y.Z`, `X.Y` and `latest` (and their
 `-slim` twins) through the Docker workflow, which refuses a tag that doesn't match `__version__`. Every merge to
 `main` publishes `edge`.

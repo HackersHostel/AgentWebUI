@@ -1,4 +1,4 @@
-// Settings (Settings · appearance, Settings · providers and Settings more boards). Lite is configured in .env, so
+// Settings (Settings · appearance, Settings · providers and Settings more boards). The server is configured in .env, so
 // the provider and agent forms write the lines to paste there; what is yours (chat, voice, notifications) is kept
 // in this browser.
 import { html, useState, useEffect, store, useStore, cx, navigate, copyText, api, providerGradient, AGENT_GRADIENT, mod, toast, local } from './lib.js';

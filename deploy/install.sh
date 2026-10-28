@@ -18,9 +18,9 @@ APP_USER=${APP_USER:-agentwebui}
 PORT=${PORT:-3000}
 REPO=${REPO:-https://github.com/HackersHostel/AgentWebUI.git}
 BRANCH=${BRANCH:-main}
-PREFIX=${PREFIX:-/opt/agentwebui-lite}
-CONF=/etc/agentwebui-lite
-DATA=/var/lib/agentwebui-lite
+PREFIX=${PREFIX:-/opt/agentwebui}
+CONF=/etc/agentwebui
+DATA=/var/lib/agentwebui
 HOME_DIR=/home/$APP_USER
 WORK=$HOME_DIR/work
 
@@ -74,7 +74,7 @@ if [ ! -f "$CONF/.env" ]; then
   say "Writing $CONF/.env"
   PASSWORD=$(head -c 18 /dev/urandom | base64 | tr -d '/+=' | head -c 20)
   {
-    echo "# AgentWebUI Lite on this server. Edit, then: sudo systemctl restart agentwebui-lite"
+    echo "# AgentWebUI on this server. Edit, then: sudo systemctl restart agentwebui"
     echo "HOST=127.0.0.1"
     echo "PORT=$PORT"
     echo "PASSWORD=$PASSWORD"
@@ -84,7 +84,7 @@ if [ ! -f "$CONF/.env" ]; then
     echo "TRUST_PROXY=$([ -n "$DOMAIN" ] && echo true || echo false)"
     echo "# NOTIFY_WEBHOOK=https://hooks.slack.com/services/…"
     echo "# BRAND_NAME=Your name"
-    echo "# BRAND_LOGO=/etc/agentwebui-lite/logo.svg"
+    echo "# BRAND_LOGO=/etc/agentwebui/logo.svg"
     echo
     echo "# Models: any OpenAI-compatible API (see $PREFIX/.env.example)"
     echo "# PROVIDER_OPENROUTER_URL=https://openrouter.ai/api/v1"
@@ -98,20 +98,20 @@ chown root:"$APP_USER" "$CONF/.env"
 chmod 640 "$CONF/.env"
 
 say "Installing the service"
-install -m 644 "$PREFIX/deploy/agentwebui-lite.service" /etc/systemd/system/agentwebui-lite.service
-sed -i "s#^User=.*#User=$APP_USER#; s#^Group=.*#Group=$APP_USER#; s#/home/agentwebui#$HOME_DIR#g; s#/opt/agentwebui-lite#$PREFIX#g" \
-  /etc/systemd/system/agentwebui-lite.service
-cat > /etc/cron.d/agentwebui-lite <<CRON
+install -m 644 "$PREFIX/deploy/agentwebui.service" /etc/systemd/system/agentwebui.service
+sed -i "s#^User=.*#User=$APP_USER#; s#^Group=.*#Group=$APP_USER#; s#/home/agentwebui#$HOME_DIR#g; s#/opt/agentwebui#$PREFIX#g" \
+  /etc/systemd/system/agentwebui.service
+cat > /etc/cron.d/agentwebui <<CRON
 # Daily copy of the chats database at 03:17, the last 14 kept.
-17 3 * * * $APP_USER cd $DATA && [ -f chats.db ] && AWL_ENV_FILE=$CONF/.env $PREFIX/.venv/bin/agentwebui-lite backup >/dev/null && ls -1t $DATA/backups/*.db | tail -n +15 | xargs -r rm --
+17 3 * * * $APP_USER cd $DATA && [ -f chats.db ] && AWL_ENV_FILE=$CONF/.env $PREFIX/.venv/bin/agentwebui backup >/dev/null && ls -1t $DATA/backups/*.db | tail -n +15 | xargs -r rm --
 CRON
 if [ -d /run/systemd/system ]; then
   systemctl daemon-reload
-  systemctl enable --now agentwebui-lite >/dev/null 2>&1
-  systemctl restart agentwebui-lite
+  systemctl enable --now agentwebui >/dev/null 2>&1
+  systemctl restart agentwebui
 else
   echo "No systemd here (a container?). Start it with:"
-  echo "  sudo -u $APP_USER AWL_ENV_FILE=$CONF/.env $PREFIX/.venv/bin/agentwebui-lite"
+  echo "  sudo -u $APP_USER AWL_ENV_FILE=$CONF/.env $PREFIX/.venv/bin/agentwebui"
 fi
 
 if [ -n "$DOMAIN" ]; then
@@ -128,12 +128,12 @@ fi
 
 say "Checking it answers"
 for _ in $(seq 1 20); do curl -fsS "http://127.0.0.1:$PORT/api/health" >/dev/null 2>&1 && break; sleep 1; done
-curl -fsS "http://127.0.0.1:$PORT/api/health" >/dev/null 2>&1 && echo "Healthy." || echo "Not answering yet: journalctl -u agentwebui-lite"
+curl -fsS "http://127.0.0.1:$PORT/api/health" >/dev/null 2>&1 && echo "Healthy." || echo "Not answering yet: journalctl -u agentwebui"
 
 say "Done"
 echo "Open:      ${DOMAIN:+https://$DOMAIN}${DOMAIN:-http://127.0.0.1:$PORT (ssh -L $PORT:127.0.0.1:$PORT this-server)}"
 [ -n "${NEW_PASSWORD:-}" ] && echo "Password:  $NEW_PASSWORD   (PASSWORD in $CONF/.env)"
-echo "Settings:  $CONF/.env, then: sudo systemctl restart agentwebui-lite"
+echo "Settings:  $CONF/.env, then: sudo systemctl restart agentwebui"
 echo "Files:     agents work in $WORK; clone repositories there from the Files page"
 [[ ",$AGENTS," == *",claude,"* ]] && echo "Claude:    sign in once: sudo -iu $APP_USER claude   (then /login)"
 [[ ",$AGENTS," == *",codex,"* ]] && echo "Codex:     sign in once: sudo -iu $APP_USER codex login --device-auth"

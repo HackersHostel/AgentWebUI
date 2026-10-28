@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 from aiohttp import web
 
-from agentwebui_lite.config import Agent, Provider, Settings
-from agentwebui_lite.server import create_app
+from agentwebui.config import Agent, Provider, Settings
+from agentwebui.server import create_app
 
 FAKE_AGENT = str(Path(__file__).with_name("fake_agent.py"))
 

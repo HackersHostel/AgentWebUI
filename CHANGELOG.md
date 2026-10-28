@@ -15,6 +15,17 @@ change settings or behavior, and its entry says how.
 - Docs for which models count as local: the engines that are recognised, how an address is classed,
   `PROVIDER_<ID>_LOCAL` both ways for engines it doesn't recognise, and how to read the reason the picker gives.
 
+### Changed
+
+- The Python package, the command, the systemd service and the install script's paths are all named `agentwebui`:
+  run `agentwebui` (and `agentwebui backup`), and the install script uses `/opt/agentwebui`, `/etc/agentwebui` and
+  `/var/lib/agentwebui`. Browser settings, sign-ins and `.env` settings are unchanged. Docker setups need nothing: the
+  image, the volumes and the paths inside the container are the same.
+- On a server set up by the install script of 0.3.0 or earlier: stop and disable the old service and delete its unit
+  and its file in `/etc/cron.d`; move its `.env` to `/etc/agentwebui/.env` and its data folder to
+  `/var/lib/agentwebui`, and set `DATA_DIR=/var/lib/agentwebui` in that `.env`; then run the script again. The chats,
+  the password and the agents' sign-ins carry over.
+
 ## [0.3.0] - 2026-10-25
 
 ### Added
@@ -30,7 +41,7 @@ change settings or behavior, and its entry says how.
 - The Docker image no longer turns on `TRUST_PROXY` by itself; the compose file still does, for Caddy. Run on its
   own, the container could otherwise be told any client address and so get around the sign-in limit.
 - AgentWebUI is released under the MIT license, copyright HackersHostel. It was proprietary. The project is now
-  called AgentWebUI; the package, command and install paths keep the name `agentwebui-lite`.
+  called AgentWebUI.
 - The new AgentWebUI logo, in the ink of each theme and accent. The installed app gets 192, 512 and maskable icons.
   `BRAND_LOGO` still replaces it everywhere.
 - The model picker lists connected agents first, has a Models tab with every model and no agents, and shows only the
@@ -48,7 +59,7 @@ change settings or behavior, and its entry says how.
 
 ### Removed
 
-- The PyPI release workflow. The `agentwebui-lite` package on PyPI is not published from this repository.
+- The PyPI release workflow. AgentWebUI is not published to PyPI from this repository.
 - The `docs/` folder of planning notes and screenshots.
 
 ## [0.2.0] - 2026-10-20
@@ -75,7 +86,7 @@ The first release.
   chats, search, Files and Git, voice, notifications with a webhook, branding and themes.
 - Managed mode for a site that frames the page: `FRAME_ANCESTORS`, one-time `/embed` links signed with
   `EMBED_SECRET`, `LOCK_MODEL` and `LOCK_FOLDER`.
-- A VPS install script with systemd and Caddy, a Docker image and compose file, and `agentwebui-lite backup`.
+- A VPS install script with systemd and Caddy, a Docker image and compose file, and `agentwebui backup`.
 
 [Unreleased]: https://github.com/HackersHostel/AgentWebUI/compare/v0.3.0...HEAD
 [0.3.0]: https://github.com/HackersHostel/AgentWebUI/compare/v0.2.0...v0.3.0

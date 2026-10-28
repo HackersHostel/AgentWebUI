@@ -1,6 +1,6 @@
 # systemd unit for AgentWebUI. deploy/install.sh installs it; the paths below are its defaults.
 [Unit]
-Description=AgentWebUI Lite
+Description=AgentWebUI
 After=network-online.target
 Wants=network-online.target
 
@@ -9,9 +9,9 @@ Type=simple
 User=agentwebui
 Group=agentwebui
 WorkingDirectory=/home/agentwebui
-Environment=AWL_ENV_FILE=/etc/agentwebui-lite/.env
+Environment=AWL_ENV_FILE=/etc/agentwebui/.env
 Environment=HOME=/home/agentwebui
-ExecStart=/opt/agentwebui-lite/.venv/bin/agentwebui-lite
+ExecStart=/opt/agentwebui/.venv/bin/agentwebui
 Restart=on-failure
 RestartSec=3
 # Agents run as this user, so they may write only its home and the data folder.
@@ -19,7 +19,7 @@ NoNewPrivileges=true
 ProtectSystem=full
 ProtectHome=tmpfs
 BindPaths=/home/agentwebui
-ReadWritePaths=/var/lib/agentwebui-lite /home/agentwebui
+ReadWritePaths=/var/lib/agentwebui /home/agentwebui
 PrivateTmp=true
 ProtectKernelTunables=true
 ProtectKernelModules=true

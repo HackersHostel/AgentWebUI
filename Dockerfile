@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git curl ca-cer
 RUN useradd --create-home --uid 1000 agentwebui && mkdir -p /data /work && chown agentwebui /data /work
 WORKDIR /app
 COPY pyproject.toml README.md ./
-COPY agentwebui_lite ./agentwebui_lite
+COPY agentwebui ./agentwebui
 RUN pip install --no-cache-dir .
 
 USER agentwebui
@@ -25,4 +25,4 @@ ENV HOST=0.0.0.0 PORT=3000 DATA_DIR=/data WORKSPACE_DIR=/work FILES_ROOTS=/work 
 EXPOSE 3000
 VOLUME ["/data", "/work", "/home/agentwebui"]
 HEALTHCHECK --interval=30s --timeout=5s CMD curl -fsS http://127.0.0.1:3000/api/health || exit 1
-CMD ["agentwebui-lite"]
+CMD ["agentwebui"]

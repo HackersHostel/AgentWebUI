@@ -1,6 +1,6 @@
 <div align="center">
 
-<a href="https://hackershostel.com/agentwebui/"><img src="agentwebui_lite/static/logo.svg" width="96" height="96" alt="AgentWebUI logo"></a>
+<a href="https://hackershostel.com/agentwebui/"><img src="agentwebui/static/logo.svg" width="96" height="96" alt="AgentWebUI logo"></a>
 
 <h1><a href="https://hackershostel.com/agentwebui/">AgentWebUI</a></h1>
 
@@ -20,6 +20,7 @@ No accounts, no setup screen, one <code>.env</code> file.</p>
 <p>
   <a href="https://hackershostel.com/agentwebui/"><strong>Website</strong></a> ·
   <a href="#run-it-on-your-computer"><strong>Quick start</strong></a> ·
+  <a href="#put-it-on-a-vps"><strong>VPS</strong></a> ·
   <a href="#docker"><strong>Docker</strong></a> ·
   <a href="#configure"><strong>Configuration</strong></a> ·
   <a href="docs/API.md"><strong>API docs</strong></a> ·
@@ -33,15 +34,14 @@ No accounts, no setup screen, one <code>.env</code> file.</p>
 
 </div>
 
-Open it and chat: there is no setup screen and no accounts. Everything is configured in `.env`. The package and
-command are still named `agentwebui-lite`.
+Open it and chat: there is no setup screen and no accounts. Everything is configured in `.env`.
 
 - **Models:** any OpenAI-compatible API (OpenAI, OpenRouter, NVIDIA, Groq, Ollama, LM Studio, vLLM, …).
 - **Agents:** anything that speaks the [Agent Client Protocol](https://agentclientprotocol.com) over stdio: Claude
   Code, Codex, Hermes, Pi, Gemini CLI, OpenCode, … Pick the agent, then **its** model and effort, then the folder it
   works in. It streams its thinking, plan, tool calls and diffs, and asks before it acts.
 
-The server is about 3,000 lines of Python with one dependency (`aiohttp`) and uses about 40 MB of memory. The web
+The server is about 3,400 lines of Python with one dependency (`aiohttp`) and uses about 40 MB of memory. The web
 client is Preact through htm with no build step. Nothing loads from the internet unless you pick a font other than
 Geist.
 
@@ -74,7 +74,7 @@ On macOS or Linux, with Python 3.11+ and Git:
 git clone https://github.com/HackersHostel/AgentWebUI.git && cd AgentWebUI
 python3 -m venv .venv && .venv/bin/pip install -e .
 cp .env.example .env        # then turn on a model provider or an agent (below)
-.venv/bin/agentwebui-lite   # http://127.0.0.1:3000
+.venv/bin/agentwebui        # http://127.0.0.1:3000
 ```
 
 Start it from this folder: it reads `.env` from the folder it starts in, and keeps its data in `data/` there. Stop
@@ -121,7 +121,7 @@ INFO open http://127.0.0.1:3000
 ```
 
 `WARNING nothing to chat with yet` means no `PROVIDER_*` or `AGENT_*` line was read; check
-[How `.env` is read](#how-env-is-read). If it stops at once with `agentwebui-lite: …`, see
+[How `.env` is read](#how-env-is-read). If it stops at once with `agentwebui: …`, see
 [If it won't start](#if-it-wont-start). After you change `.env`, stop and start it again.
 
 **Update** from the same folder, then start it again:
@@ -136,7 +136,7 @@ To work on AgentWebUI itself, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Two ways; both end with the app behind Caddy on HTTPS. Point a DNS name at the server first.
 
-### Install script (systemd, lightest)
+### Install script (systemd)
 
 On a fresh Ubuntu 22.04+ or Debian 12+ server:
 
@@ -145,9 +145,9 @@ git clone https://github.com/HackersHostel/AgentWebUI.git && cd AgentWebUI
 sudo DOMAIN=chat.example.com ./deploy/install.sh
 ```
 
-It creates an `agentwebui` user, installs the app in `/opt/agentwebui-lite`, Claude Code and Codex with their ACP
-adapters (`AGENTS=claude,codex`, or `AGENTS=` for none), writes `/etc/agentwebui-lite/.env` with a new password,
-starts the `agentwebui-lite` service, puts Caddy in front for HTTPS (with streaming left unbuffered), and adds a daily
+It creates an `agentwebui` user, installs the app in `/opt/agentwebui`, Claude Code and Codex with their ACP
+adapters (`AGENTS=claude,codex`, or `AGENTS=` for none), writes `/etc/agentwebui/.env` with a new password,
+starts the `agentwebui` service, puts Caddy in front for HTTPS (with streaming left unbuffered), and adds a daily
 backup. It prints the address and the password. Then sign the agents in once, as the app's user:
 
 ```bash
@@ -159,9 +159,12 @@ Agents work in `/home/agentwebui/work` (`FILES_ROOTS`). Clone your repositories 
 `sudo -iu agentwebui git clone …`. For pushing, give that user a deploy key: `sudo -iu agentwebui ssh-keygen -t
 ed25519`, and add the public key to the repository. Run the script again to update.
 
-Change settings in `/etc/agentwebui-lite/.env`, then `sudo systemctl restart agentwebui-lite`. Logs:
-`journalctl -u agentwebui-lite -f`. Without `DOMAIN` the app answers only on `127.0.0.1`; reach it with
+Change settings in `/etc/agentwebui/.env`, then `sudo systemctl restart agentwebui`. Logs:
+`journalctl -u agentwebui -f`. Without `DOMAIN` the app answers only on `127.0.0.1`; reach it with
 `ssh -L 3000:127.0.0.1:3000 your-server` or Tailscale.
+
+A server set up with version 0.3.0 or earlier keeps its settings and data in other folders: move them as the
+[changelog](CHANGELOG.md#unreleased) describes before you run the script again.
 
 ### Docker
 
@@ -209,7 +212,7 @@ sandboxed, so an HTML or SVG file can't run as the page.
 
 ## Data and backups
 
-Everything AgentWebUI keeps is in `DATA_DIR`: `data/` in the folder it starts in, `/var/lib/agentwebui-lite` with
+Everything AgentWebUI keeps is in `DATA_DIR`: `data/` in the folder it starts in, `/var/lib/agentwebui` with
 the install script, and the `data` volume (`/data` inside the container) with Docker.
 
 | | |
@@ -217,25 +220,25 @@ the install script, and the `data` volume (`/data` inside the container) with Do
 | `chats.db` | Chats, messages, projects, the names of attached files, and the agents' cached options, in SQLite. While the server runs, `chats.db-wal` and `chats.db-shm` sit beside it; they are part of the database. |
 | `files/` | The attachments and uploads themselves, and the images and files agents send into a chat |
 | `secret.key` | Signs the sign-in cookie (with `PASSWORD`). Losing it, or changing `PASSWORD`, signs every browser out. |
-| `backups/` | Copies made by `agentwebui-lite backup` |
+| `backups/` | Copies made by `agentwebui backup` |
 
 Temporary chats are never written here, and files an agent writes in its folder stay in that folder.
 
-`agentwebui-lite backup [FILE]` writes a consistent copy of `chats.db` while the server runs (to
+`agentwebui backup [FILE]` writes a consistent copy of `chats.db` while the server runs (to
 `DATA_DIR/backups/` by default). **It copies only `chats.db`**: back up `files/` and `secret.key` as well, with your
 usual tools. Files in `files/` are written once and never changed, so a plain copy is safe while the server runs.
 Run the command with the same `.env` as the server: from the same folder, or with `AWL_ENV_FILE` (below). With
-Docker, `docker compose exec app agentwebui-lite backup` writes to `/data/backups`.
+Docker, `docker compose exec app agentwebui backup` writes to `/data/backups`.
 
 The install script adds a daily cron job that keeps the 14 newest copies; for other setups, add this line yourself:
 
 ```
-17 3 * * * agentwebui cd /var/lib/agentwebui-lite && AWL_ENV_FILE=/etc/agentwebui-lite/.env /opt/agentwebui-lite/.venv/bin/agentwebui-lite backup
+17 3 * * * agentwebui cd /var/lib/agentwebui && AWL_ENV_FILE=/etc/agentwebui/.env /opt/agentwebui/.venv/bin/agentwebui backup
 ```
 
 To restore a backup:
 
-1. Stop the server: Ctrl+C, `sudo systemctl stop agentwebui-lite`, or `docker compose stop app`.
+1. Stop the server: Ctrl+C, `sudo systemctl stop agentwebui`, or `docker compose stop app`.
 2. In `DATA_DIR`, move `chats.db` out of the way **together with** any `chats.db-wal` and `chats.db-shm` beside it.
    A clean stop removes those two; if they are still there, they belong to the old database and must not be left
    next to the backup.
@@ -252,9 +255,9 @@ cd data && mkdir -p before-restore && mv chats.db* before-restore/ && cp backups
 With the install script:
 
 ```bash
-sudo systemctl stop agentwebui-lite
-sudo -u agentwebui sh -c 'cd /var/lib/agentwebui-lite && mkdir -p before-restore && mv chats.db* before-restore/ && cp backups/chats-20261025-031700.db chats.db'
-sudo systemctl start agentwebui-lite
+sudo systemctl stop agentwebui
+sudo -u agentwebui sh -c 'cd /var/lib/agentwebui && mkdir -p before-restore && mv chats.db* before-restore/ && cp backups/chats-20261025-031700.db chats.db'
+sudo systemctl start agentwebui
 ```
 
 With Docker:
@@ -330,7 +333,7 @@ the chat, and the server's log has the rest. Any other agent that speaks ACP ove
   replaces the same line in the file. The Docker image sets `HOST`, `PORT`, `DATA_DIR`, `WORKSPACE_DIR` and
   `FILES_ROOTS` this way.
 - **`AWL_ENV_FILE` says which file to read.** Without it, `.env` in the folder the server starts in. The install
-  script uses `/etc/agentwebui-lite/.env` and the Docker image `/app/.env`. Relative paths in the file, such as
+  script uses `/etc/agentwebui/.env` and the Docker image `/app/.env`. Relative paths in the file, such as
   `DATA_DIR=data`, are relative to the folder the server starts in too.
 - **Some values are cut short:** `BRAND_NAME` to 40 characters, `BRAND_GREETING` to 120, `USER_NAME` to 60.
 - **Changes take effect on the next start.**
@@ -386,8 +389,8 @@ give the reason in one line:
 
 ### If it won't start
 
-A setting it can't work with stops it at once. It prints `agentwebui-lite:` and the reason, and exits with code 2;
-under systemd the reason is in `journalctl -u agentwebui-lite`.
+A setting it can't work with stops it at once. It prints `agentwebui:` and the reason, and exits with code 2;
+under systemd the reason is in `journalctl -u agentwebui`.
 
 | It says | Do this |
 |---|---|

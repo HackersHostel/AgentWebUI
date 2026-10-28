@@ -24,7 +24,7 @@ import aiohttp
 
 from .config import Provider
 
-log = logging.getLogger("agentwebui_lite")
+log = logging.getLogger("agentwebui")
 
 RECHECK_SECONDS = 300
 LOOKUP_SECONDS = 3.0

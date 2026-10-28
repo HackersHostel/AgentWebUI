@@ -13,7 +13,7 @@ import aiohttp
 from .config import Provider
 from .locality import Locality
 
-log = logging.getLogger("agentwebui_lite")
+log = logging.getLogger("agentwebui")
 MODELS_TTL = 300
 
 
